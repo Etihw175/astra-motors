@@ -49,7 +49,7 @@
 
           <div class="card">
             <div style="display:flex;flex-direction:column;gap:12px">
-              <button class="btn btn-primary btn-block" id="btn-reserve">จองรถคันนี้ (เงินจอง ฿5,000)</button>
+              <button class="btn btn-primary btn-block" id="btn-reserve">จองรถคันนี้ (เงินจอง ฿200,000)</button>
               <a class="btn btn-ghost btn-block" id="btn-testdrive" href="#">จองทดลองขับรุ่นนี้</a>
               <a class="btn btn-ghost btn-block" id="btn-finance" href="#">คำนวณค่างวดรุ่นนี้</a>
             </div>
@@ -59,6 +59,8 @@
     </div>
   </main>
 
+  <!-- ตัวแสดงโมเดล 3D (หมุนดู 360°) — ใช้เมื่อมีไฟล์ .glb ใน /assets/models/ -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/model.js"></script>

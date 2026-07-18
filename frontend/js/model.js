@@ -27,8 +27,74 @@ function saveConfig() {
   });
 }
 
+/* ---------- ภาพรถ: โมเดล 3D (.glb) ถ้ามีไฟล์ / ไม่มีก็ใช้ภาพ SVG ---------- */
+
+let has3D = false;      // มีไฟล์ .glb ของรุ่นนี้หรือไม่
+let viewer = null;      // element <model-viewer>
+let paintWarned = false;
+
+function modelUrl() {
+  return `/assets/models/${car.id}.glb`;
+}
+
+async function detect3D() {
+  try {
+    const res = await fetch(modelUrl(), { method: "HEAD" });
+    has3D = res.ok;
+  } catch {
+    has3D = false;
+  }
+}
+
+function hexToRgba(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1];
+}
+
+// เปลี่ยนสีเฉพาะ material ที่เป็น "สีตัวถัง" (เดาจากชื่อ material ในไฟล์โมเดล)
+function recolorModel() {
+  if (!viewer || !viewer.model) return;
+  const rgba = hexToRgba(currentColor().hex);
+  const paintRe = /paint|body|carros|shell|exterior|main|primary/i;
+  const skipRe = /glass|window|tire|tyre|wheel|rim|light|chrome|interior|mirror|plate/i;
+  let hit = 0;
+  for (const mat of viewer.model.materials) {
+    if (paintRe.test(mat.name) && !skipRe.test(mat.name)) {
+      mat.pbrMetallicRoughness.setBaseColorFactor(rgba);
+      hit++;
+    }
+  }
+  if (hit === 0 && !paintWarned) {
+    paintWarned = true;
+    toast("โมเดล 3D นี้ไม่รองรับการเปลี่ยนสี — สีที่เลือกมีผลกับราคาเท่านั้น");
+  }
+}
+
 function renderVisual() {
-  document.getElementById("car-visual").innerHTML = carSVG(currentColor().hex);
+  const zone = document.getElementById("car-visual");
+  if (has3D) {
+    if (!viewer) {
+      zone.innerHTML = "";
+      viewer = document.createElement("model-viewer");
+      viewer.src = modelUrl();
+      viewer.alt = `โมเดล 3D ของ ${car.name}`;
+      viewer.setAttribute("camera-controls", "");
+      viewer.setAttribute("auto-rotate", "");
+      viewer.setAttribute("shadow-intensity", "1");
+      viewer.setAttribute("exposure", "1.05");
+      viewer.style.cssText = "width:100%;height:400px;background:transparent";
+      viewer.addEventListener("load", recolorModel);
+      zone.appendChild(viewer);
+      zone.insertAdjacentHTML(
+        "beforeend",
+        '<p class="muted small mt-1">ลากเพื่อหมุนดูรอบคัน 360° · สกรอลเพื่อซูม</p>'
+      );
+    } else {
+      recolorModel();
+    }
+  } else {
+    zone.innerHTML = carSVG(currentColor().hex);
+  }
 }
 
 function renderSwatches() {
@@ -161,6 +227,7 @@ async function initModel() {
     location.href = "/pages/reserve.html";
   });
 
+  await detect3D();
   renderVisual();
   renderSwatches();
   renderColorInfo();

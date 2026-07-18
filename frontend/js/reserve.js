@@ -38,7 +38,7 @@ function renderSummary() {
       (o) => `<div class="price-line"><span class="lbl">${o.name}</span><span class="val">+${baht(o.price)}</span></div>`
     ),
     `<div class="price-line total"><span class="lbl">ราคารวม</span><span class="val">${baht(total)}</span></div>`,
-    `<div class="price-line"><span class="lbl">เงินจองวันนี้</span><span class="val">${baht(5000)}</span></div>`,
+    `<div class="price-line"><span class="lbl">เงินจองวันนี้</span><span class="val">${baht(200000)}</span></div>`,
   ].join("");
 
   if (car.promotion) {

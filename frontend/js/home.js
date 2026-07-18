@@ -4,7 +4,7 @@
 renderHeader("home");
 renderFooter();
 
-const HERO_COLOR = "#B4653A"; // ทองแดงซันเซ็ต — สีลายเซ็นของแบรนด์
+const HERO_COLOR = "#C8102E"; // แดง Rosso Corsa — สีซูเปอร์คาร์ในใจทุกคน
 
 async function initHome() {
   document.getElementById("hero-visual").innerHTML = carSVG(HERO_COLOR);
@@ -13,8 +13,8 @@ async function initHome() {
   try {
     const cars = await API.cars();
 
-    // แถบสเปคใต้ hero ใช้ตัวเลขจริงของรุ่นท็อป (Vertex EV)
-    const top = cars.find((c) => c.id === "vertex-ev") || cars[0];
+    // แถบสเปคใต้ hero ใช้ตัวเลขจริงของรุ่นท็อป (Ferrari 488 GTB)
+    const top = cars.find((c) => c.id === "ferrari-488") || cars[0];
     document.getElementById("hero-ticker").innerHTML = `
       <span><b class="num">${top.power_hp} <i>HP</i></b>กำลังสูงสุด</span>
       <span><b class="num">${top.torque_nm} <i>Nm</i></b>แรงบิด</span>
