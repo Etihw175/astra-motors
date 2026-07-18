@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>การจองของฉัน — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="section">
+    <div class="container" style="max-width:820px">
+      <div class="section-head">
+        <p class="eyebrow">Journey 7/7 — ติดตามสถานะ</p>
+        <h2>การจองของฉัน</h2>
+        <p>สถานะสินเชื่ออัปเดตอัตโนมัติแบบเรียลไทม์ ไม่ต้องรีเฟรชหน้า</p>
+      </div>
+
+      <div class="card">
+        <div class="field" style="margin-bottom:0">
+          <label for="st-code">รหัสใบจอง</label>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <input type="text" id="st-code" placeholder="เช่น ADR-2607-0001" style="flex:1;min-width:220px">
+            <button class="btn btn-primary" id="st-load">ตรวจสอบสถานะ</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="rsv-zone"></div>
+      <div id="td-zone"></div>
+    </div>
+  </main>
+
+  <!-- Modal ยืนยันยกเลิกใบจอง -->
+  <div class="modal-backdrop" id="cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+    <div class="modal">
+      <h3 id="cancel-title">ยืนยันยกเลิกใบจอง?</h3>
+      <p>ยกเลิกภายใน 7 วันหลังจอง ได้รับเงินจองคืนเต็มจำนวน (5-7 วันทำการ)
+      หลังจากนั้นได้รับคืน 50% ตามเงื่อนไข การยกเลิกไม่สามารถย้อนกลับได้</p>
+      <div class="actions">
+        <button class="btn btn-ghost" id="cancel-no">เก็บใบจองไว้</button>
+        <button class="btn btn-danger" id="cancel-yes">ยืนยันยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/status.js"></script>
+</body>
+</html>

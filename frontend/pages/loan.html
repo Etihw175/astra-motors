@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ยื่นขอสินเชื่อ — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="section">
+    <div class="container" style="max-width:760px">
+      <div class="section-head">
+        <p class="eyebrow">Journey 6/7 — ยื่นขอสินเชื่อ</p>
+        <h2>ยื่นไฟแนนซ์ออนไลน์ รู้ผลไว</h2>
+        <p>กรอกข้อมูลและแนบเอกสาร ระบบจะส่งเรื่องไปยังสถาบันการเงินและติดตามผลให้แบบเรียลไทม์</p>
+      </div>
+
+      <form id="ln-form" novalidate>
+        <div class="card">
+          <h3>ใบจองที่ต้องการยื่นสินเชื่อ</h3>
+          <div class="field mt-2">
+            <label for="ln-code">รหัสใบจอง</label>
+            <input type="text" id="ln-code" placeholder="เช่น ADR-2607-0001" required>
+            <p class="hint">ระบบเติมให้อัตโนมัติถ้าคุณเพิ่งจองรถจากเครื่องนี้</p>
+            <p class="error">ไม่พบใบจองรหัสนี้</p>
+          </div>
+          <div id="rsv-summary" class="muted small"></div>
+        </div>
+
+        <div class="card">
+          <h3>แผนสินเชื่อ</h3>
+          <div class="field mt-2">
+            <label for="ln-plan">สถาบันการเงิน</label>
+            <select id="ln-plan"></select>
+            <p class="hint" id="plan-hint"></p>
+          </div>
+          <div class="grid grid-2">
+            <div class="field">
+              <label for="ln-down">เงินดาวน์ (บาท)</label>
+              <input type="number" id="ln-down" min="0" step="1000" required inputmode="numeric">
+              <p class="hint" id="down-hint"></p>
+              <p class="error">เงินดาวน์ไม่ถูกต้อง</p>
+            </div>
+            <div class="field">
+              <label for="ln-term">จำนวนงวด</label>
+              <select id="ln-term"></select>
+            </div>
+          </div>
+          <div class="price-lines" id="ln-preview"></div>
+        </div>
+
+        <div class="card">
+          <h3>ข้อมูลผู้ขอสินเชื่อ</h3>
+          <div class="grid grid-2 mt-2">
+            <div class="field">
+              <label for="ln-name">ชื่อ-นามสกุล</label>
+              <input type="text" id="ln-name" required autocomplete="name">
+              <p class="error">กรุณากรอกชื่อ-นามสกุล</p>
+            </div>
+            <div class="field">
+              <label for="ln-phone">เบอร์โทรศัพท์</label>
+              <input type="tel" id="ln-phone" required autocomplete="tel" inputmode="tel">
+              <p class="error">กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก</p>
+            </div>
+            <div class="field">
+              <label for="ln-occupation">อาชีพ</label>
+              <select id="ln-occupation">
+                <option value="พนักงานบริษัท">พนักงานบริษัท</option>
+                <option value="เจ้าของธุรกิจ">เจ้าของธุรกิจ</option>
+                <option value="ข้าราชการ/รัฐวิสาหกิจ">ข้าราชการ/รัฐวิสาหกิจ</option>
+                <option value="อาชีพอิสระ/ฟรีแลนซ์">อาชีพอิสระ/ฟรีแลนซ์</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ln-income">รายได้ต่อเดือน (บาท)</label>
+              <input type="number" id="ln-income" min="1" step="1000" required inputmode="numeric">
+              <p class="hint">ยอดผ่อนไม่ควรเกิน 40% ของรายได้</p>
+              <p class="error">กรุณากรอกรายได้ต่อเดือน</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>เอกสารประกอบ <span class="muted small">(จำลอง — ไฟล์ไม่ได้ถูกอัปโหลดจริง)</span></h3>
+          <div class="grid grid-2 mt-2">
+            <div class="field">
+              <label for="doc-id">สำเนาบัตรประชาชน</label>
+              <input type="file" id="doc-id" accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+            <div class="field">
+              <label for="doc-income">หลักฐานรายได้ (สลิป/Statement)</label>
+              <input type="file" id="doc-income" accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="ln-consent">
+            <span>ข้าพเจ้ายินยอมให้ใช้และส่งต่อข้อมูลส่วนบุคคลแก่สถาบันการเงินเพื่อพิจารณาสินเชื่อ
+            ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="ln-submit">ส่งคำขอสินเชื่อ</button>
+      </form>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/loan.js"></script>
+</body>
+</html>

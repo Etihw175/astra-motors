@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายละเอียดรุ่น — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="section">
+    <div class="container">
+      <div id="loading" class="muted">กำลังโหลดข้อมูลรถ…</div>
+
+      <div class="detail-layout hidden" id="detail">
+        <!-- ฝั่งซ้าย: ภาพรถเปลี่ยนสีตามที่เลือก + สเปคย่อ -->
+        <div class="detail-visual">
+          <p class="eyebrow" id="car-body-type"></p>
+          <h2 id="car-name" style="font-size:clamp(26px,3.6vw,40px)"></h2>
+          <p class="muted" id="car-tagline"></p>
+          <div id="car-visual" class="mt-2" style="filter:drop-shadow(0 24px 32px rgba(0,0,0,.5))"></div>
+          <div class="mt-2">
+            <div class="swatch-row" id="swatches" role="radiogroup" aria-label="เลือกสีตัวถัง"></div>
+            <p class="mt-1" id="color-info"></p>
+          </div>
+          <div class="spec-grid" id="spec-grid"></div>
+        </div>
+
+        <!-- ฝั่งขวา: ออปชัน + ราคา real-time + โปรโมชั่น -->
+        <div>
+          <div class="card">
+            <h3>ออปชันเสริม</h3>
+            <p class="muted small">ราคาด้านล่างอัปเดตทันทีเมื่อเลือก</p>
+            <div id="options" class="mt-1"></div>
+          </div>
+
+          <div class="card">
+            <h3 class="mb-2">สรุปราคา</h3>
+            <div class="price-lines" id="price-lines"></div>
+            <p class="muted small mt-2">
+              ราคาอัปเดตล่าสุดวันนี้ อาจเปลี่ยนแปลงได้จนกว่าจะออกใบจอง —
+              เมื่อวางเงินจอง ระบบจะล็อกราคานี้ให้ 14 วัน
+            </p>
+          </div>
+
+          <div id="promo-zone"></div>
+
+          <div class="card">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <button class="btn btn-primary btn-block" id="btn-reserve">จองรถคันนี้ (เงินจอง ฿5,000)</button>
+              <a class="btn btn-ghost btn-block" id="btn-testdrive" href="#">จองทดลองขับรุ่นนี้</a>
+              <a class="btn btn-ghost btn-block" id="btn-finance" href="#">คำนวณค่างวดรุ่นนี้</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/model.js"></script>
+</body>
+</html>

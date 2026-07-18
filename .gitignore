@@ -1,0 +1,13 @@
+# ห้าม commit ไฟล์ลับเด็ดขาด
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/

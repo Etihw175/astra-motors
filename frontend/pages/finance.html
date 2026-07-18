@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เครื่องคำนวณไฟแนนซ์ — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Journey 2/7 — เครื่องคำนวณไฟแนนซ์</p>
+        <h2>ลองคำนวณค่างวดก่อนตัดสินใจ</h2>
+        <p>เทียบยอดผ่อนจากหลายสถาบันการเงินพร้อมกัน — แผนที่จางลงคือแผนที่เงื่อนไขยังไม่ผ่านพร้อมเหตุผล</p>
+      </div>
+
+      <div class="grid grid-2" style="align-items:start">
+        <!-- ฝั่งซ้าย: ตัวเลือกรถ เงินดาวน์ งวดผ่อน -->
+        <div class="card">
+          <div class="field">
+            <label for="car-select">รุ่นรถ</label>
+            <select id="car-select"></select>
+            <p class="hint" id="price-hint"></p>
+          </div>
+
+          <div class="field">
+            <label for="down-range">เงินดาวน์ <span class="num" id="down-label"></span></label>
+            <input type="range" id="down-range" min="5" max="50" step="5" value="25"
+                   aria-describedby="down-label">
+            <p class="hint">เลื่อนเพื่อปรับสัดส่วนเงินดาวน์ (5–50% ของราคารถ)</p>
+          </div>
+
+          <div class="field">
+            <label>ระยะเวลาผ่อน</label>
+            <div class="chip-row" id="term-chips" role="radiogroup" aria-label="เลือกจำนวนงวด"></div>
+          </div>
+
+          <div class="price-lines mt-3" id="loan-summary"></div>
+        </div>
+
+        <!-- ฝั่งขวา: ผลลัพธ์ต่อแผนสินเชื่อ -->
+        <div>
+          <div id="plan-list"></div>
+          <p class="muted small mt-2">
+            * ยอดผ่อนคำนวณจากอัตราดอกเบี้ยคงที่ (flat rate) เป็นการประมาณการเท่านั้น
+            ผลอนุมัติและเงื่อนไขจริงขึ้นอยู่กับการพิจารณาของสถาบันการเงิน
+          </p>
+          <div class="cta-row mt-3" style="display:flex;gap:12px;flex-wrap:wrap">
+            <a class="btn btn-primary" href="/pages/reserve.html">จองรถคันนี้</a>
+            <a class="btn btn-ghost" href="/pages/loan.html">ยื่นขอสินเชื่อ</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/finance.js"></script>
+</body>
+</html>

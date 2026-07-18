@@ -1,0 +1,26 @@
+services:
+  web:
+    build:
+      context: .                    # ต้องเป็น root เพื่อให้ Dockerfile เห็นทั้ง backend/ และ frontend/
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app       # แก้โค้ด backend เห็นผลทันที (--reload)
+      - ./frontend:/app/frontend     # แก้ไฟล์ frontend เห็นผลทันที ไม่ต้อง build ใหม่
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ---- สัปดาห์ที่ 2: เปิดใช้ PostgreSQL โดยลบ comment ด้านล่าง ----
+  # db:
+  #   image: postgres:16
+  #   environment:
+  #     POSTGRES_USER: appuser
+  #     POSTGRES_PASSWORD: apppassword
+  #     POSTGRES_DB: appdb
+  #   volumes:
+  #     - db_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5433:5432"    # ใช้ 5433 ฝั่งเครื่องเรา กัน conflict กับ Postgres ที่ติดตั้งไว้แล้ว
+
+# volumes:
+#   db_data:

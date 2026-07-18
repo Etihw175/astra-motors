@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTRA Motors — เปรียบเทียบ จองทดลองขับ และจองรถออนไลน์</title>
+  <meta name="description" content="เลือก SUV ที่ใช่: เปรียบเทียบสเปค คำนวณไฟแนนซ์ จองทดลองขับ และวางเงินจองออนไลน์ จบในที่เดียว">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main>
+    <!-- Hero: ภาพรถ + ทางเข้าหลักของ journey -->
+    <section class="hero">
+      <div class="container inner">
+        <div>
+          <p class="eyebrow">SUV Lineup 2026</p>
+          <h1>เลือก เปรียบเทียบ จอง<br><em>จบในที่เดียว ไม่ต้องโทรศัพท์</em></h1>
+          <p class="lede">
+            ดูสเปคและราคาจริงแบบไม่มีบวกเพิ่มทีหลัง คำนวณค่างวดก่อนตัดสินใจ
+            จองคิวทดลองขับผ่านปฏิทินออนไลน์ แล้ววางเงินจองพร้อมล็อกราคาได้ทันที
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="/pages/compare.html">เปรียบเทียบรุ่นรถ</a>
+            <a class="btn btn-ghost" href="/pages/test-drive.html">จองทดลองขับ</a>
+          </div>
+          <div class="spec-ticker" id="hero-ticker"></div>
+        </div>
+        <div class="visual" id="hero-visual"></div>
+      </div>
+    </section>
+
+    <!-- รายการรุ่นรถทั้งหมด -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Models</p>
+          <h2>รุ่นรถทั้งหมด</h2>
+          <p>ราคาที่แสดงเป็นราคาเริ่มต้นรวมภาษี อัปเดตล่าสุดวันนี้ — ราคาสุดท้ายจะถูกล็อกเมื่อออกใบจอง</p>
+        </div>
+        <div class="grid grid-4" id="car-grid" aria-busy="true"></div>
+      </div>
+    </section>
+
+    <!-- ขั้นตอนการซื้อ (ลำดับจริงของ journey) -->
+    <section class="section" style="padding-top:0">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">How it works</p>
+          <h2>4 ขั้นตอน ถึงวันรับรถ</h2>
+        </div>
+        <div class="journey-strip">
+          <div class="jstep">
+            <span class="n num">01</span>
+            <h3>เปรียบเทียบ &amp; คำนวณ</h3>
+            <p>เทียบสเปคเคียงข้างกัน แล้วลองคำนวณค่างวดจากหลายสถาบันการเงิน</p>
+          </div>
+          <div class="jstep">
+            <span class="n num">02</span>
+            <h3>ทดลองขับ</h3>
+            <p>เลือกโชว์รูมและเวลาที่สะดวกจากคิวว่างจริง ระบบแจ้งโชว์รูมให้อัตโนมัติ</p>
+          </div>
+          <div class="jstep">
+            <span class="n num">03</span>
+            <h3>จองออนไลน์</h3>
+            <p>วางเงินจอง 5,000 บาท ล็อกราคาและโปรโมชั่น 14 วัน พร้อมใบจองอิเล็กทรอนิกส์</p>
+          </div>
+          <div class="jstep">
+            <span class="n num">04</span>
+            <h3>ยื่นสินเชื่อ &amp; รับรถ</h3>
+            <p>ยื่นไฟแนนซ์ออนไลน์ ติดตามผลแบบเรียลไทม์ แล้วนัดวันรับรถ</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/home.js"></script>
+</body>
+</html>

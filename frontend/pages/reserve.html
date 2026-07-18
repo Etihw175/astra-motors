@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จองรถออนไลน์ — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Journey 5/7 — จองรถออนไลน์</p>
+        <h2>วางเงินจอง ล็อกราคาและโปรโมชั่นทันที</h2>
+        <p>เงินจอง ฿5,000 — ยกเลิกภายใน 7 วันได้รับคืนเต็มจำนวน ราคาที่จองจะถูกล็อกไว้ 14 วัน</p>
+      </div>
+
+      <!-- ถ้ายังไม่ได้จัดสเปครถ -->
+      <div class="card text-center hidden" id="no-config">
+        <p>ยังไม่ได้เลือกรุ่นและสเปครถ — เริ่มจากเลือกรุ่นที่ต้องการก่อน</p>
+        <div class="mt-2"><a class="btn btn-primary" href="/pages/compare.html">ไปเลือกรุ่นรถ</a></div>
+      </div>
+
+      <div class="grid grid-2 hidden" id="reserve-layout" style="align-items:start">
+        <!-- ฝั่งซ้าย: สรุปรถที่จะจอง -->
+        <div>
+          <div class="card">
+            <div id="car-visual"></div>
+            <h3 id="sum-name" class="mt-1"></h3>
+            <p class="muted" id="sum-color"></p>
+            <div id="sum-stock" class="mt-1"></div>
+            <div class="price-lines mt-2" id="sum-lines"></div>
+            <p class="small mt-2"><a href="#" id="edit-link">แก้ไขสี/ออปชัน</a></p>
+          </div>
+          <div id="promo-zone"></div>
+        </div>
+
+        <!-- ฝั่งขวา: ข้อมูลผู้จอง + ชำระเงินจอง -->
+        <form id="rs-form" novalidate>
+          <div class="card">
+            <h3>ข้อมูลผู้จอง</h3>
+            <div class="field mt-2">
+              <label for="rs-name">ชื่อ-นามสกุล</label>
+              <input type="text" id="rs-name" required autocomplete="name">
+              <p class="error">กรุณากรอกชื่อ-นามสกุล</p>
+            </div>
+            <div class="grid grid-2">
+              <div class="field">
+                <label for="rs-phone">เบอร์โทรศัพท์</label>
+                <input type="tel" id="rs-phone" required autocomplete="tel" inputmode="tel">
+                <p class="error">กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก</p>
+              </div>
+              <div class="field">
+                <label for="rs-email">อีเมล (รับใบจองอิเล็กทรอนิกส์)</label>
+                <input type="email" id="rs-email" required autocomplete="email">
+                <p class="error">กรุณากรอกอีเมลให้ถูกต้อง</p>
+              </div>
+            </div>
+            <label class="check">
+              <input type="checkbox" id="rs-msg-only">
+              <span>ให้เจ้าหน้าที่ติดต่อผ่านข้อความเท่านั้น ไม่ต้องโทรหา</span>
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>ชำระเงินจอง <span class="num" style="color:var(--accent-strong)">฿5,000</span></h3>
+            <p class="muted small">การชำระเงินในโปรเจกต์นี้เป็นการจำลอง ไม่มีการตัดเงินจริง</p>
+            <div class="chip-row mt-2" id="pay-chips" role="radiogroup" aria-label="เลือกช่องทางชำระเงิน">
+              <button type="button" class="chip selected" data-pay="promptpay" role="radio" aria-checked="true">QR พร้อมเพย์</button>
+              <button type="button" class="chip" data-pay="card" role="radio" aria-checked="false">บัตรเครดิต/เดบิต</button>
+            </div>
+            <label class="check mt-2">
+              <input type="checkbox" id="rs-agree">
+              <span>ยอมรับเงื่อนไขการจองและนโยบายคืนเงิน: ยกเลิกภายใน 7 วันคืนเต็มจำนวน หลังจากนั้นคืน 50%</span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="rs-submit">ชำระเงินจองและออกใบจอง</button>
+        </form>
+      </div>
+
+      <!-- ใบจองอิเล็กทรอนิกส์ (หลังจองสำเร็จ) -->
+      <div class="card confirm-panel hidden" id="rs-confirm"></div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/reserve.js"></script>
+</body>
+</html>
