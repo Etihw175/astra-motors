@@ -30,9 +30,9 @@
 
 ## เครดิตโมเดล
 
-| ไฟล์ | ไฟล์ต้นทางจาก Sketchfab | ผู้สร้าง | ลิงก์ | License |
+| ไฟล์ | ไฟล์ต้นทางจาก Sketchfab | ผู้สร้าง |
 |---|---|---|---|---|
-| gtr-r35.glb | nissan_skyline_gtr_r35.glb | _https://sketchfab.com/BlackSnow02_ | - | - |
-| porsche-911.glb | 2018_porsche_911.glb | _https://sketchfab.com/Outlaw_Games_ | - | - |
-| huracan-evo.glb | 2017_lamborghini_huracan_lp580-2.glb | _https://sketchfab.com/ddiaz-design_ | - | - |
-| ferrari-488.glb | 2019_ferrari_488_pista.glb | _https://sketchfab.com/Outlaw_Games_ | - | - |
+| gtr-r35.glb | nissan_skyline_gtr_r35.glb | _https://sketchfab.com/BlackSnow02_ |
+| porsche-911.glb | 2018_porsche_911.glb | _https://sketchfab.com/Outlaw_Games_ |
+| huracan-evo.glb | 2017_lamborghini_huracan_lp580-2.glb | _https://sketchfab.com/ddiaz-design_ |
+| ferrari-488.glb | 2019_ferrari_488_pista.glb | _https://sketchfab.com/Outlaw_Games_ |
