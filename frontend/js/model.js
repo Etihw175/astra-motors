@@ -56,7 +56,8 @@ function recolorModel() {
   if (!viewer || !viewer.model) return;
   const rgba = hexToRgba(currentColor().hex);
   const paintRe = /paint|body|carros|shell|exterior|main|primary/i;
-  const skipRe = /glass|window|tire|tyre|wheel|rim|light|chrome|interior|mirror|plate/i;
+  // trim/caliper มีคำว่า paint ในชื่อ แต่เป็นชิ้นส่วนที่ห้ามเปลี่ยนสี
+  const skipRe = /glass|window|tire|tyre|wheel|rim|light|chrome|interior|mirror|plate|trim|calliper|caliper/i;
   let hit = 0;
   for (const mat of viewer.model.materials) {
     if (paintRe.test(mat.name) && !skipRe.test(mat.name)) {

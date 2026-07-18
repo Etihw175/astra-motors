@@ -11,3 +11,6 @@ venv/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# โฟลเดอร์โมเดล 3D สำรองที่ดาวน์โหลดมาเลือก (commit เฉพาะ 4 ไฟล์ .glb ที่ใช้จริง)
+frontend/assets/models/*/
