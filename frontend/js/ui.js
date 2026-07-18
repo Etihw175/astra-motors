@@ -92,9 +92,19 @@ function carSVG(color = "#4A4F55") {
 const PAINT_RE = /paint|body|carros|shell|exterior|main|primary/i;
 const PAINT_SKIP_RE = /glass|window|tire|tyre|wheel|rim|light|chrome|interior|mirror|plate|trim|calliper|caliper/i;
 
+// แปลงค่าสี sRGB → linear (glTF ต้องการค่า linear ไม่งั้นสีเพี้ยน/ซีด)
+function srgbToLinear(c) {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
 function hexToRgba(hex) {
   const n = parseInt(hex.slice(1), 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1];
+  return [
+    srgbToLinear(((n >> 16) & 255) / 255),
+    srgbToLinear(((n >> 8) & 255) / 255),
+    srgbToLinear((n & 255) / 255),
+    1,
+  ];
 }
 
 // เปลี่ยนสีตัวถังของ <model-viewer> — คืนจำนวน material ที่เปลี่ยนได้
@@ -103,40 +113,52 @@ function recolorViewer(viewer, hex) {
   const rgba = hexToRgba(hex);
   let hit = 0;
   for (const mat of viewer.model.materials) {
-    if (PAINT_RE.test(mat.name) && !PAINT_SKIP_RE.test(mat.name)) {
+    // ห้ามให้ material เดียวพังทั้งลูป — บางไฟล์มี material ที่ inactive แล้ว throw
+    try {
+      if (!PAINT_RE.test(mat.name) || PAINT_SKIP_RE.test(mat.name)) continue;
       mat.pbrMetallicRoughness.setBaseColorFactor(rgba);
       hit++;
+    } catch {
+      /* material ใช้งานไม่ได้ — ข้ามไปตัวถัดไป */
     }
   }
   return hit;
 }
 
-// สร้าง HTML โมเดล 3D ของรถ — ใช้แทนรูปภาพในทุกหน้า
+// สร้างภาพรถ: แสดง SVG ทันทีเป็น placeholder แล้วอัปเกรดเป็นโมเดล 3D เมื่อพร้อม
 function carVisual3D(carId, colorHex, opts = {}) {
   const { height = 210, controls = false } = opts;
-  return `<model-viewer class="car-3d" src="/assets/models/${carId}.glb"
-    alt="โมเดล 3D" data-color="${colorHex}" auto-rotate loading="lazy"
-    ${controls ? "camera-controls disable-zoom" : ""}
-    interaction-prompt="none" shadow-intensity="1" exposure="1.05"
-    style="width:100%;height:${height}px;background:transparent"></model-viewer>`;
+  return `<div class="car-3d-wrap" data-car="${carId}" data-color="${colorHex}"
+    data-height="${height}" data-controls="${controls ? "1" : "0"}"
+    style="min-height:${height}px">${carSVG(colorHex)}</div>`;
 }
 
-// ผูก event ให้โมเดลทุกตัวในหน้า: โหลดเสร็จ→ทาสี, โหลดพลาด→ใช้ SVG แทน
+// อัปเกรด placeholder ทุกตัวในหน้าเป็น <model-viewer> เมื่อไลบรารีโหลดเสร็จ
+// (ช้าแค่ไหนก็รอได้ ไม่มี timeout — ถ้าไลบรารี/ไฟล์โมเดลพัง จะคง SVG ไว้)
 function initCarVisuals(root = document) {
-  if (!customElements.get("model-viewer")) {
-    // สคริปต์ model-viewer ยังโหลดไม่เสร็จ (หรือโหลดไม่ได้) — รอแล้วเช็คอีกครั้ง
-    setTimeout(() => {
-      if (customElements.get("model-viewer")) return initCarVisuals(root);
-      root.querySelectorAll("model-viewer.car-3d").forEach((v) => {
-        v.outerHTML = carSVG(v.dataset.color);
-      });
-    }, 4000);
-  }
-  root.querySelectorAll("model-viewer.car-3d").forEach((v) => {
-    if (v.dataset.bound) return;
-    v.dataset.bound = "1";
-    v.addEventListener("load", () => recolorViewer(v, v.dataset.color));
-    v.addEventListener("error", () => { v.outerHTML = carSVG(v.dataset.color); }, { once: true });
+  if (!window.customElements) return; // เบราว์เซอร์เก่ามาก — ใช้ SVG ต่อไป
+  customElements.whenDefined("model-viewer").then(() => {
+    root.querySelectorAll(".car-3d-wrap").forEach((wrap) => {
+      if (wrap.dataset.bound) return;
+      wrap.dataset.bound = "1";
+      const v = document.createElement("model-viewer");
+      v.src = `/assets/models/${wrap.dataset.car}.glb`;
+      v.alt = "โมเดล 3D";
+      v.setAttribute("loading", "lazy");
+      v.setAttribute("interaction-prompt", "none");
+      v.setAttribute("shadow-intensity", "1");
+      v.setAttribute("exposure", "1.05");
+      v.setAttribute("auto-rotate", "");
+      if (wrap.dataset.controls === "1") {
+        v.setAttribute("camera-controls", "");
+        v.setAttribute("disable-zoom", "");
+      }
+      v.style.cssText = `width:100%;height:${wrap.dataset.height}px;background:transparent`;
+      // อ่านสีจาก dataset ตอนโหลดเสร็จ เพื่อให้สีที่ผู้ใช้เพิ่งเลือกถูกทาเสมอ
+      v.addEventListener("load", () => recolorViewer(v, wrap.dataset.color));
+      v.addEventListener("error", () => { wrap.innerHTML = carSVG(wrap.dataset.color); }, { once: true });
+      wrap.replaceChildren(v);
+    });
   });
 }
 

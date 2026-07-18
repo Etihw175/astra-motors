@@ -27,59 +27,37 @@ function saveConfig() {
   });
 }
 
-/* ---------- ภาพรถ: โมเดล 3D (.glb) ถ้ามีไฟล์ / ไม่มีก็ใช้ภาพ SVG ---------- */
+/* ---------- ภาพรถ: โมเดล 3D (มี SVG เป็น placeholder/fallback ในตัวจาก ui.js) ---------- */
 
-let has3D = false;      // มีไฟล์ .glb ของรุ่นนี้หรือไม่
-let viewer = null;      // element <model-viewer>
 let paintWarned = false;
-
-function modelUrl() {
-  return `/assets/models/${car.id}.glb`;
-}
-
-async function detect3D() {
-  try {
-    const res = await fetch(modelUrl(), { method: "HEAD" });
-    has3D = res.ok;
-  } catch {
-    has3D = false;
-  }
-}
-
-// เปลี่ยนสีตัวถังด้วยตัวช่วยกลางใน ui.js — แจ้งผู้ใช้ถ้าโมเดลนี้เปลี่ยนสีไม่ได้
-function recolorModel() {
-  if (!viewer || !viewer.model) return;
-  const hit = recolorViewer(viewer, currentColor().hex);
-  if (hit === 0 && !paintWarned) {
-    paintWarned = true;
-    toast("โมเดล 3D นี้ไม่รองรับการเปลี่ยนสี — สีที่เลือกมีผลกับราคาเท่านั้น");
-  }
-}
 
 function renderVisual() {
   const zone = document.getElementById("car-visual");
-  if (has3D) {
-    if (!viewer) {
-      zone.innerHTML = "";
-      viewer = document.createElement("model-viewer");
-      viewer.src = modelUrl();
-      viewer.alt = `โมเดล 3D ของ ${car.name}`;
-      viewer.setAttribute("camera-controls", "");
-      viewer.setAttribute("auto-rotate", "");
-      viewer.setAttribute("shadow-intensity", "1");
-      viewer.setAttribute("exposure", "1.05");
-      viewer.style.cssText = "width:100%;height:400px;background:transparent";
-      viewer.addEventListener("load", recolorModel);
-      zone.appendChild(viewer);
-      zone.insertAdjacentHTML(
-        "beforeend",
-        '<p class="muted small mt-1">ลากเพื่อหมุนดูรอบคัน 360° · สกรอลเพื่อซูม</p>'
-      );
-    } else {
-      recolorModel();
+  const hex = currentColor().hex;
+
+  // ครั้งแรก: สร้าง placeholder แล้วปล่อยให้ ui.js อัปเกรดเป็นโมเดล 3D
+  if (!zone.dataset.init) {
+    zone.dataset.init = "1";
+    zone.innerHTML =
+      carVisual3D(car.id, hex, { height: 400, controls: true }) +
+      '<p class="muted small mt-1">ลากเพื่อหมุนดูรอบคัน 360°</p>';
+    initCarVisuals();
+    return;
+  }
+
+  // ผู้ใช้เปลี่ยนสี: อัปเดตโมเดล 3D ถ้าโหลดแล้ว / อัปเดต SVG ถ้ายังไม่โหลด
+  const wrap = zone.querySelector(".car-3d-wrap");
+  if (!wrap) return;
+  wrap.dataset.color = hex; // เผื่อโมเดลยังโหลดอยู่ — สีล่าสุดจะถูกทาตอนโหลดเสร็จ
+  const viewer = wrap.querySelector("model-viewer");
+  if (viewer && viewer.model) {
+    const hit = recolorViewer(viewer, hex);
+    if (hit === 0 && !paintWarned) {
+      paintWarned = true;
+      toast("โมเดล 3D นี้ไม่รองรับการเปลี่ยนสี — สีที่เลือกมีผลกับราคาเท่านั้น");
     }
-  } else {
-    zone.innerHTML = carSVG(currentColor().hex);
+  } else if (!viewer) {
+    wrap.innerHTML = carSVG(hex); // ยังเป็น SVG placeholder อยู่
   }
 }
 
@@ -213,7 +191,6 @@ async function initModel() {
     location.href = "/pages/reserve.html";
   });
 
-  await detect3D();
   renderVisual();
   renderSwatches();
   renderColorInfo();
