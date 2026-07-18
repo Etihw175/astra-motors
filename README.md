@@ -70,12 +70,6 @@ docker-compose.yml
 - `POST /api/reservations`, `POST /api/reservations/{code}/cancel`, `POST /api/reservations/{code}/delivery`
 - `POST /api/loans`, `GET /api/loans/{id}` — ยื่น/ติดตามสินเชื่อ (ผลออกใน ~20 วินาที)
 
-## Deploy (Render)
-
-1. Push ขึ้น GitHub แล้วสร้าง **Web Service** ประเภท **Docker** บน Render
-2. ตั้งค่า **Dockerfile Path** = `backend/Dockerfile` และ **Docker Build Context** = `.` (root)
-3. ไม่ต้องตั้ง env เพิ่ม — แอปอ่าน `PORT` ที่ Render กำหนดให้อัตโนมัติ
-4. ทุกครั้งที่ push เข้า `main` ระบบจะ build + deploy ใหม่ให้เอง
 
 ## บันทึก Prompt ที่ใช้ (ตามข้อกำหนดรายวิชา)
 
