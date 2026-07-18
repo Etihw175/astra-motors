@@ -69,8 +69,3 @@ docker-compose.yml
 - `POST /api/testdrives` — จองทดลองขับ
 - `POST /api/reservations`, `POST /api/reservations/{code}/cancel`, `POST /api/reservations/{code}/delivery`
 - `POST /api/loans`, `GET /api/loans/{id}` — ยื่น/ติดตามสินเชื่อ (ผลออกใน ~20 วินาที)
-
-
-## บันทึก Prompt ที่ใช้ (ตามข้อกำหนดรายวิชา)
-
-- _(บันทึก prompt สำคัญที่ใช้กับ AI ที่นี่ เพื่อให้อาจารย์ตรวจกระบวนการได้)_
