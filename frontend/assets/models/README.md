@@ -30,14 +30,9 @@
 
 ## เครดิตโมเดล
 
-ไฟล์ที่เลือกใช้ (คัดจากตัวเลือกที่ดาวน์โหลดมา 16 ไฟล์ — ตัวสำรองอยู่ในโฟลเดอร์ย่อย ไม่ถูก commit):
-
 | ไฟล์ | ไฟล์ต้นทางจาก Sketchfab | ผู้สร้าง | ลิงก์ | License |
 |---|---|---|---|---|
-| gtr-r35.glb | nissan_skyline_gtr_r35.glb | _(กรอกจากหน้าโมเดลที่ดาวน์โหลด)_ | - | - |
-| porsche-911.glb | 2018_porsche_911.glb | _(กรอก)_ | - | - |
-| huracan-evo.glb | 2017_lamborghini_huracan_lp580-2.glb | _(กรอก)_ | - | - |
-| ferrari-488.glb | 2019_ferrari_488_pista.glb | _(กรอก)_ | - | - |
-
-> สำคัญ: ถ้าโมเดลเป็น license CC-BY ต้องกรอกชื่อผู้สร้าง + ลิงก์ให้ครบก่อนส่งงาน/นำเสนอ
-> (ดูได้จากหน้า Downloads ในบัญชี Sketchfab ของคุณ)
+| gtr-r35.glb | nissan_skyline_gtr_r35.glb | _https://sketchfab.com/BlackSnow02_ | - | - |
+| porsche-911.glb | 2018_porsche_911.glb | _https://sketchfab.com/Outlaw_Games_ | - | - |
+| huracan-evo.glb | 2017_lamborghini_huracan_lp580-2.glb | _https://sketchfab.com/ddiaz-design_ | - | - |
+| ferrari-488.glb | 2019_ferrari_488_pista.glb | _https://sketchfab.com/Outlaw_Games_ | - | - |
