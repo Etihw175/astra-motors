@@ -46,25 +46,10 @@ async function detect3D() {
   }
 }
 
-function hexToRgba(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1];
-}
-
-// เปลี่ยนสีเฉพาะ material ที่เป็น "สีตัวถัง" (เดาจากชื่อ material ในไฟล์โมเดล)
+// เปลี่ยนสีตัวถังด้วยตัวช่วยกลางใน ui.js — แจ้งผู้ใช้ถ้าโมเดลนี้เปลี่ยนสีไม่ได้
 function recolorModel() {
   if (!viewer || !viewer.model) return;
-  const rgba = hexToRgba(currentColor().hex);
-  const paintRe = /paint|body|carros|shell|exterior|main|primary/i;
-  // trim/caliper มีคำว่า paint ในชื่อ แต่เป็นชิ้นส่วนที่ห้ามเปลี่ยนสี
-  const skipRe = /glass|window|tire|tyre|wheel|rim|light|chrome|interior|mirror|plate|trim|calliper|caliper/i;
-  let hit = 0;
-  for (const mat of viewer.model.materials) {
-    if (paintRe.test(mat.name) && !skipRe.test(mat.name)) {
-      mat.pbrMetallicRoughness.setBaseColorFactor(rgba);
-      hit++;
-    }
-  }
+  const hit = recolorViewer(viewer, currentColor().hex);
   if (hit === 0 && !paintWarned) {
     paintWarned = true;
     toast("โมเดล 3D นี้ไม่รองรับการเปลี่ยนสี — สีที่เลือกมีผลกับราคาเท่านั้น");

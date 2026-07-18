@@ -86,6 +86,60 @@ function carSVG(color = "#4A4F55") {
   </svg>`;
 }
 
+/* ---------- โมเดล 3D ใช้ร่วมกันทุกหน้า (fallback เป็นภาพ SVG อัตโนมัติ) ---------- */
+
+// material ที่เป็นสีตัวถัง — trim/caliper มีคำว่า paint แต่ห้ามเปลี่ยนสี
+const PAINT_RE = /paint|body|carros|shell|exterior|main|primary/i;
+const PAINT_SKIP_RE = /glass|window|tire|tyre|wheel|rim|light|chrome|interior|mirror|plate|trim|calliper|caliper/i;
+
+function hexToRgba(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1];
+}
+
+// เปลี่ยนสีตัวถังของ <model-viewer> — คืนจำนวน material ที่เปลี่ยนได้
+function recolorViewer(viewer, hex) {
+  if (!viewer.model) return 0;
+  const rgba = hexToRgba(hex);
+  let hit = 0;
+  for (const mat of viewer.model.materials) {
+    if (PAINT_RE.test(mat.name) && !PAINT_SKIP_RE.test(mat.name)) {
+      mat.pbrMetallicRoughness.setBaseColorFactor(rgba);
+      hit++;
+    }
+  }
+  return hit;
+}
+
+// สร้าง HTML โมเดล 3D ของรถ — ใช้แทนรูปภาพในทุกหน้า
+function carVisual3D(carId, colorHex, opts = {}) {
+  const { height = 210, controls = false } = opts;
+  return `<model-viewer class="car-3d" src="/assets/models/${carId}.glb"
+    alt="โมเดล 3D" data-color="${colorHex}" auto-rotate loading="lazy"
+    ${controls ? "camera-controls disable-zoom" : ""}
+    interaction-prompt="none" shadow-intensity="1" exposure="1.05"
+    style="width:100%;height:${height}px;background:transparent"></model-viewer>`;
+}
+
+// ผูก event ให้โมเดลทุกตัวในหน้า: โหลดเสร็จ→ทาสี, โหลดพลาด→ใช้ SVG แทน
+function initCarVisuals(root = document) {
+  if (!customElements.get("model-viewer")) {
+    // สคริปต์ model-viewer ยังโหลดไม่เสร็จ (หรือโหลดไม่ได้) — รอแล้วเช็คอีกครั้ง
+    setTimeout(() => {
+      if (customElements.get("model-viewer")) return initCarVisuals(root);
+      root.querySelectorAll("model-viewer.car-3d").forEach((v) => {
+        v.outerHTML = carSVG(v.dataset.color);
+      });
+    }, 4000);
+  }
+  root.querySelectorAll("model-viewer.car-3d").forEach((v) => {
+    if (v.dataset.bound) return;
+    v.dataset.bound = "1";
+    v.addEventListener("load", () => recolorViewer(v, v.dataset.color));
+    v.addEventListener("error", () => { v.outerHTML = carSVG(v.dataset.color); }, { once: true });
+  });
+}
+
 /* ---------- ไอคอน SVG (ไม่ใช้ emoji ตามแนวทาง UI) ---------- */
 
 const ICONS = {

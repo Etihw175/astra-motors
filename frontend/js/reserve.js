@@ -18,7 +18,9 @@ function renderSummary() {
   const total = car.price + color.extra + opts.reduce((s, o) => s + o.price, 0);
   config.total = total;
 
-  document.getElementById("car-visual").innerHTML = carSVG(color.hex);
+  document.getElementById("car-visual").innerHTML =
+    carVisual3D(car.id, color.hex, { height: 260, controls: true });
+  initCarVisuals();
   document.getElementById("sum-name").textContent = car.name;
   document.getElementById("sum-color").textContent =
     `สี${color.name}` + (opts.length ? ` + ออปชัน ${opts.length} รายการ` : "");

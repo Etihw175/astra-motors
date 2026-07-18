@@ -7,7 +7,10 @@ renderFooter();
 const HERO_COLOR = "#C8102E"; // แดง Rosso Corsa — สีซูเปอร์คาร์ในใจทุกคน
 
 async function initHome() {
-  document.getElementById("hero-visual").innerHTML = carSVG(HERO_COLOR);
+  // hero ใช้โมเดล 3D ของ Ferrari 488 หมุนโชว์ (ลากหมุนได้)
+  document.getElementById("hero-visual").innerHTML =
+    carVisual3D("ferrari-488", HERO_COLOR, { height: 380, controls: true });
+  initCarVisuals();
 
   const grid = document.getElementById("car-grid");
   try {
@@ -27,7 +30,7 @@ async function initHome() {
         const defaultColor = car.colors.find((c) => c.extra === 0) || car.colors[0];
         return `
         <article class="car-card">
-          <div class="visual">${carSVG(defaultColor.hex)}</div>
+          <div class="visual">${carVisual3D(car.id, defaultColor.hex)}</div>
           <div class="body">
             <h3>${car.name}</h3>
             <p class="tagline">${car.tagline}</p>
@@ -40,6 +43,7 @@ async function initHome() {
         </article>`;
       })
       .join("");
+    initCarVisuals();
   } catch (err) {
     grid.innerHTML = `<p class="muted">${err.message}</p>`;
   }
