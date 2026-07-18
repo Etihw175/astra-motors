@@ -165,7 +165,8 @@ function renderSpecs() {
 async function initModel() {
   const id = qs("id");
   try {
-    car = await API.car(id || "");
+    // เปิดหน้าตรงๆ โดยไม่มี ?id ใน URL — แสดงรุ่นแรกแทนที่จะค้างหน้าโหลด
+    car = id ? await API.car(id) : (await API.cars())[0];
   } catch (err) {
     document.getElementById("loading").textContent = err.message + " — กลับไปเลือกจากหน้าแรกได้เลย";
     return;
@@ -203,4 +204,7 @@ async function initModel() {
   document.getElementById("detail").classList.remove("hidden");
 }
 
-initModel();
+// ถ้ามีข้อผิดพลาดที่ไม่คาดคิด ให้แสดงข้อความแทนการค้างที่ "กำลังโหลด"
+initModel().catch((err) => {
+  document.getElementById("loading").textContent = "หน้านี้แสดงผลไม่สำเร็จ: " + err.message;
+});
