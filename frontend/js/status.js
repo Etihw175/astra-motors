@@ -62,16 +62,16 @@ function render() {
 
     html += `<div class="card"><div class="stepper">
 
-      <div class="step done">
-        <div class="dot" aria-hidden="true">1</div>
+      <div class="step done rise">
+        <div class="dot" aria-hidden="true">${ICONS.checkSmall}</div>
         <div class="content">
           <h4>จองสำเร็จ — ออกใบจองอิเล็กทรอนิกส์</h4>
           <p class="desc">วันที่จอง ${new Date(r.created_at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })} · ราคาถูกล็อกถึง ${thaiDate(r.price_locked_until)}</p>
         </div>
       </div>
 
-      <div class="step ${hasLoan ? "done" : "active"}">
-        <div class="dot" aria-hidden="true">2</div>
+      <div class="step ${hasLoan ? "done" : "active"} rise" style="animation-delay:80ms">
+        <div class="dot" aria-hidden="true">${hasLoan ? ICONS.checkSmall : "2"}</div>
         <div class="content">
           <h4>ยื่นขอสินเชื่อ</h4>
           ${
@@ -83,11 +83,13 @@ function render() {
         </div>
       </div>
 
-      <div class="step ${approved ? "done" : rejected ? "failed" : reviewing ? "active" : ""}">
-        <div class="dot" aria-hidden="true">3</div>
+      <div class="step ${approved ? "done" : rejected ? "failed" : reviewing ? "active" : ""} rise" style="animation-delay:160ms">
+        <div class="dot" aria-hidden="true">${approved ? ICONS.checkSmall : "3"}</div>
         <div class="content">
           <h4>ผลการพิจารณาสินเชื่อ</h4>
-          ${reviewing ? '<p class="desc">สถาบันการเงินกำลังพิจารณา… หน้านี้จะอัปเดตผลให้อัตโนมัติ</p>' : ""}
+          ${reviewing ? '<span class="status-flow">ยื่นเอกสารแล้ว <span class="arr">→</span> กำลังพิจารณา…</span><p class="desc mt-1">สถาบันการเงินกำลังพิจารณา… หน้านี้จะอัปเดตผลให้อัตโนมัติ</p>' : ""}
+          ${approved ? '<span class="status-flow ok">กำลังพิจารณา <span class="arr">→</span> อนุมัติแล้ว</span>' : ""}
+          ${rejected ? '<span class="status-flow bad">กำลังพิจารณา <span class="arr">→</span> ไม่ผ่านการอนุมัติ</span>' : ""}
           ${approved ? `<p class="desc" style="color:var(--ok)">อนุมัติแล้ว — ${loan.result.message}</p>` : ""}
           ${
             rejected
@@ -108,8 +110,8 @@ function render() {
         </div>
       </div>
 
-      <div class="step ${delivered ? "done" : approved ? "active" : ""}">
-        <div class="dot" aria-hidden="true">4</div>
+      <div class="step ${delivered ? "done" : approved ? "active" : ""} rise" style="animation-delay:240ms">
+        <div class="dot" aria-hidden="true">${delivered ? ICONS.checkSmall : "4"}</div>
         <div class="content">
           <h4>นัดรับรถ</h4>
           ${

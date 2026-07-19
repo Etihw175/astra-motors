@@ -54,6 +54,12 @@ function renderResults() {
     <div class="price-line"><span class="lbl">เงินดาวน์ (${downPct}%)</span><span class="val">-${baht(down)}</span></div>
     <div class="price-line total"><span class="lbl">ยอดจัดไฟแนนซ์</span><span class="val">${baht(principal)}</span></div>`;
 
+  // หาแผนที่ค่างวดต่ำสุดในบรรดาแผนที่ผ่านเงื่อนไข เพื่อไฮไลต์ "คุ้มที่สุด"
+  const eligibleMonthlies = plans
+    .filter((p) => p.terms.includes(term) && downPct >= p.min_down_pct)
+    .map((p) => monthlyPayment(principal, p.flat_rate, term));
+  const bestMonthly = eligibleMonthlies.length ? Math.min(...eligibleMonthlies) : null;
+
   document.getElementById("plan-list").innerHTML = plans
     .map((p) => {
       const termOk = p.terms.includes(term);
@@ -61,16 +67,18 @@ function renderResults() {
       const eligible = termOk && downOk;
       const monthly = monthlyPayment(principal, p.flat_rate, term);
       const effective = (p.flat_rate * 1.8).toFixed(2); // อัตราที่แท้จริงโดยประมาณ
+      const isBest = eligible && monthly === bestMonthly;
 
       let reason = "";
       if (!downOk) reason = `ต้องดาวน์ขั้นต่ำ ${p.min_down_pct}%`;
       else if (!termOk) reason = `รองรับเฉพาะ ${p.terms.join("/")} งวด`;
 
       return `
-      <div class="card" style="${eligible ? "" : "opacity:.55"}">
+      <div class="card ${isBest ? "plan-best" : ""}" style="${eligible ? "" : "opacity:.55"}">
         <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
           <div>
             <h3 style="font-size:18px">${p.name}
+              ${isBest ? '<span class="badge badge-ok">คุ้มที่สุด</span>' : ""}
               ${p.promo ? '<span class="badge badge-accent">โปรโมชั่น</span>' : ""}
             </h3>
             <p class="muted small">${p.note}</p>

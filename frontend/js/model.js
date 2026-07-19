@@ -124,6 +124,8 @@ function renderPrice() {
     `<div class="price-line total"><span class="lbl">ราคารวม</span><span class="val">${baht(totalPrice())}</span></div>`,
   ];
   document.getElementById("price-lines").innerHTML = lines.join("");
+  const mobileTotal = document.getElementById("mobile-total");
+  if (mobileTotal) mobileTotal.textContent = baht(totalPrice());
   saveConfig();
 }
 
@@ -187,10 +189,14 @@ async function initModel() {
   document.getElementById("car-tagline").textContent = car.tagline;
   document.getElementById("btn-testdrive").href = `/pages/test-drive.html?car=${car.id}`;
   document.getElementById("btn-finance").href = `/pages/finance.html?car=${car.id}`;
-  document.getElementById("btn-reserve").addEventListener("click", () => {
+  const goReserve = () => {
     saveConfig();
     location.href = "/pages/reserve.html";
-  });
+  };
+  document.getElementById("btn-reserve").addEventListener("click", goReserve);
+  document.getElementById("mobile-reserve").addEventListener("click", goReserve);
+  document.getElementById("mobile-cta").classList.remove("hidden");
+  document.body.classList.add("has-mobile-cta");
 
   renderVisual();
   renderSwatches();

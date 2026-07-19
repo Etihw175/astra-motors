@@ -128,7 +128,8 @@ function recolorViewer(viewer, hex) {
 // สร้างภาพรถ: แสดง SVG ทันทีเป็น placeholder แล้วอัปเกรดเป็นโมเดล 3D เมื่อพร้อม
 function carVisual3D(carId, colorHex, opts = {}) {
   const { height = 210, controls = false } = opts;
-  return `<div class="car-3d-wrap" data-car="${carId}" data-color="${colorHex}"
+  // shimmer-overlay = แสงวิ่งบอกว่ากำลังโหลดโมเดล 3D — ปลดออกเมื่อโหลดเสร็จ/ใช้ SVG แทน
+  return `<div class="car-3d-wrap shimmer-overlay" data-car="${carId}" data-color="${colorHex}"
     data-height="${height}" data-controls="${controls ? "1" : "0"}"
     style="min-height:${height}px">${carSVG(colorHex)}</div>`;
 }
@@ -155,8 +156,14 @@ function initCarVisuals(root = document) {
       }
       v.style.cssText = `width:100%;height:${wrap.dataset.height}px;background:transparent`;
       // อ่านสีจาก dataset ตอนโหลดเสร็จ เพื่อให้สีที่ผู้ใช้เพิ่งเลือกถูกทาเสมอ
-      v.addEventListener("load", () => recolorViewer(v, wrap.dataset.color));
-      v.addEventListener("error", () => { wrap.innerHTML = carSVG(wrap.dataset.color); }, { once: true });
+      v.addEventListener("load", () => {
+        wrap.classList.remove("shimmer-overlay");
+        recolorViewer(v, wrap.dataset.color);
+      });
+      v.addEventListener("error", () => {
+        wrap.classList.remove("shimmer-overlay");
+        wrap.innerHTML = carSVG(wrap.dataset.color);
+      }, { once: true });
       wrap.replaceChildren(v);
     });
   });
@@ -167,6 +174,8 @@ function initCarVisuals(root = document) {
 const ICONS = {
   check:
     '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#58b98b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+  checkSmall:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
   alert:
     '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e06060" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
 };

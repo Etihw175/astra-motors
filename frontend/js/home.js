@@ -13,6 +13,18 @@ async function initHome() {
   initCarVisuals();
 
   const grid = document.getElementById("car-grid");
+  // การ์ดโครง (skeleton) ระหว่างรอข้อมูลจาก API
+  grid.innerHTML = Array.from({ length: 4 })
+    .map(
+      () => `
+      <div class="skel-card" aria-hidden="true">
+        <div class="skel-visual shimmer-overlay"></div>
+        <div class="skel-line shimmer-overlay w60"></div>
+        <div class="skel-line shimmer-overlay"></div>
+        <div class="skel-line shimmer-overlay w40"></div>
+      </div>`
+    )
+    .join("");
   try {
     const cars = await API.cars();
 
@@ -26,10 +38,10 @@ async function initHome() {
 
     grid.setAttribute("aria-busy", "false");
     grid.innerHTML = cars
-      .map((car) => {
+      .map((car, i) => {
         const defaultColor = car.colors.find((c) => c.extra === 0) || car.colors[0];
         return `
-        <article class="car-card">
+        <article class="car-card rise" style="animation-delay:${i * 90}ms">
           <div class="visual">${carVisual3D(car.id, defaultColor.hex)}</div>
           <div class="body">
             <h3>${car.name}</h3>
