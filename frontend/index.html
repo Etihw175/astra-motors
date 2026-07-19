@@ -8,19 +8,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=5">
+  <link rel="stylesheet" href="/css/style.css?v=6">
 </head>
 <body>
   <main>
-    <!-- Hero: ภาพรถ + ทางเข้าหลักของ journey -->
-    <section class="hero">
+    <!-- Hero โรงละครโชว์รูมกลางคืน: ม่านแสง + สปอตไลต์ + โมเดล 3D + HUD สเปคลอย + marquee -->
+    <section class="hero cinema">
+      <div class="fx-aurora fx-a1" aria-hidden="true"></div>
+      <div class="fx-aurora fx-a2" aria-hidden="true"></div>
+      <div class="fx-spot" aria-hidden="true"></div>
       <div class="container inner">
-        <div>
+        <div class="hero-copy">
           <p class="eyebrow">Supercar Lineup 2026</p>
-          <h1>เลือก เปรียบเทียบ จอง<br><em>จบในที่เดียว ไม่ต้องโทรศัพท์</em></h1>
+          <h1>เป็นเจ้าของ<em>ตำนาน</em><br>ได้ในไม่กี่คลิก</h1>
           <p class="lede">
-            ดูสเปคและราคาจริงแบบไม่มีบวกเพิ่มทีหลัง คำนวณค่างวดก่อนตัดสินใจ
-            จองคิวทดลองขับผ่านปฏิทินออนไลน์ แล้ววางเงินจองพร้อมล็อกราคาได้ทันที
+            เทียบสเปคเคียงข้างกัน คำนวณค่างวดจากหลายสถาบัน จองทดลองขับถึงโชว์รูม
+            แล้วล็อกราคาซูเปอร์คาร์ในฝันด้วยใบจองออนไลน์ — ไม่ต้องโทรศัพท์แม้แต่ครั้งเดียว
           </p>
           <div class="cta-row">
             <a class="btn btn-primary" href="/pages/compare.html">เปรียบเทียบรุ่นรถ</a>
@@ -28,8 +31,15 @@
           </div>
           <div class="spec-ticker" id="hero-ticker"></div>
         </div>
-        <div class="visual" id="hero-visual"></div>
+        <div class="stage">
+          <div class="floor-glow" aria-hidden="true"></div>
+          <div class="visual" id="hero-visual"></div>
+          <div class="hud hud-1 num" id="hud-1"></div>
+          <div class="hud hud-2 num" id="hud-2"></div>
+          <div class="hud hud-3 num" id="hud-3"></div>
+        </div>
       </div>
+      <div class="marquee" aria-hidden="true"><div class="marquee-track" id="marquee-track"></div></div>
     </section>
 
     <!-- รายการรุ่นรถทั้งหมด -->
@@ -78,8 +88,9 @@
   </main>
 
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-  <script src="/js/api.js?v=5"></script>
-  <script src="/js/ui.js?v=5"></script>
-  <script src="/js/home.js?v=5"></script>
+  <script src="/js/api.js?v=6"></script>
+  <script src="/js/ui.js?v=6"></script>
+  <script src="/js/fx.js?v=6"></script>
+  <script src="/js/home.js?v=6"></script>
 </body>
 </html>

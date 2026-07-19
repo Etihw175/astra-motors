@@ -589,3 +589,142 @@ input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); cu
 /* ---------- Micro-interactions ---------- */
 .btn:active { transform: translateY(0) scale(0.98); }
 tbody tr:hover td { background: rgba(255, 255, 255, 0.022); }
+
+/* =========================================================
+   โหมดโรงละครโชว์รูมกลางคืน (cinematic home)
+   ========================================================= */
+
+.hero.cinema {
+  min-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 104px; /* เว้นที่ให้แถบ marquee ขอบล่าง */
+}
+
+/* ม่านแสง (aurora) สองชั้น เคลื่อนช้าๆ คนละทิศ */
+.fx-aurora {
+  position: absolute;
+  width: 55vw;
+  height: 55vw;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.fx-a1 {
+  top: -18vw;
+  right: -12vw;
+  background: radial-gradient(circle, rgba(210, 128, 60, 0.34), transparent 60%);
+  animation: drift1 16s ease-in-out infinite alternate;
+}
+.fx-a2 {
+  bottom: -22vw;
+  left: -14vw;
+  background: radial-gradient(circle, rgba(63, 90, 120, 0.4), transparent 60%);
+  animation: drift2 20s ease-in-out infinite alternate;
+}
+@keyframes drift1 { to { transform: translate(-6vw, 5vh) scale(1.15); } }
+@keyframes drift2 { to { transform: translate(5vw, -6vh) scale(1.1); } }
+
+/* ลำแสงสปอตไลต์จากเพดานโชว์รูม */
+.fx-spot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(60% 55% at 72% 0%, rgba(242, 214, 160, 0.13), transparent 70%);
+}
+
+/* หัวเรื่องใหญ่ + คำเน้นไล่สีทองแดงวิ่ง */
+.hero-copy h1 { font-size: clamp(36px, 5.6vw, 68px); line-height: 1.08; font-weight: 700; }
+.hero-copy h1 em {
+  font-style: normal;
+  background: linear-gradient(105deg, var(--accent-strong), #f2d6a0 45%, var(--accent) 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sheen 5.5s ease-in-out infinite;
+}
+@keyframes sheen { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+
+/* เวทีรถ: แสงสะท้อนพื้น + HUD สเปคลอย */
+.stage { position: relative; }
+.floor-glow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 4%;
+  height: 70px;
+  background: radial-gradient(ellipse at center, rgba(210, 128, 60, 0.4), transparent 70%);
+  filter: blur(22px);
+  pointer-events: none;
+}
+.hud {
+  position: absolute;
+  z-index: 2;
+  padding: 9px 16px;
+  border-radius: 11px;
+  border: 1px solid rgba(210, 128, 60, 0.4);
+  background: rgba(21, 28, 37, 0.6);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: 15px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  animation: hud-float 6s ease-in-out infinite;
+}
+.hud i { font-style: normal; color: var(--text-dim); font-size: 11.5px; }
+.hud-1 { top: 4%; right: 2%; }
+.hud-2 { top: 42%; left: -3%; animation-delay: -2s; }
+.hud-3 { bottom: 12%; right: 6%; animation-delay: -4s; }
+@keyframes hud-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+/* แถบชื่อรุ่นวิ่งไม่รู้จบ (marquee) */
+.marquee {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  background: rgba(13, 17, 23, 0.65);
+  backdrop-filter: blur(6px);
+  padding: 12px 0;
+}
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee 30s linear infinite;
+  font-family: var(--font-data);
+  font-size: 14px;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+}
+.marquee-track .seq { display: inline-flex; align-items: center; gap: 40px; padding-right: 40px; }
+.marquee-track b { color: var(--text); font-weight: 600; }
+.marquee-track .sl { color: var(--accent-strong); }
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+/* การ์ดรุ่นรถ: จุดไฮไลต์ทองแดงวิ่งตามเมาส์ (คู่กับ tilt ใน fx.js) */
+.car-card { --mx: 50%; --my: 50%; position: relative; }
+.car-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(420px circle at var(--mx) var(--my), rgba(226, 154, 85, 0.12), transparent 46%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.car-card:hover::after { opacity: 1; }
+
+/* scroll reveal (fx.js เพิ่มคลาส .in เมื่อเลื่อนถึง) */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.55s ease, transform 0.55s ease; }
+.reveal.in { opacity: 1; transform: none; }
+
+@media (max-width: 960px) {
+  .hud { display: none; }
+  .hero.cinema { min-height: auto; padding-bottom: 88px; }
+}

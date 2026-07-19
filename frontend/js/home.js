@@ -28,13 +28,29 @@ async function initHome() {
   try {
     const cars = await API.cars();
 
-    // แถบสเปคใต้ hero ใช้ตัวเลขจริงของรุ่นท็อป (Ferrari 488 GTB)
+    // แถบสเปคใต้ hero: ตัวเลขวิ่งจาก 0 (ใช้ตัวเลขจริงของรุ่นท็อป Ferrari 488 GTB)
     const top = cars.find((c) => c.id === "ferrari-488") || cars[0];
     document.getElementById("hero-ticker").innerHTML = `
-      <span><b class="num">${top.power_hp} <i>HP</i></b>กำลังสูงสุด</span>
-      <span><b class="num">${top.torque_nm} <i>Nm</i></b>แรงบิด</span>
-      <span><b class="num">${top.accel} <i>วิ</i></b>0–100 กม./ชม.</span>
-      <span><b class="num">${cars.length} <i>รุ่น</i></b>ให้เลือกเปรียบเทียบ</span>`;
+      <span><b class="num"><span id="tick-hp">0</span> <i>HP</i></b>กำลังสูงสุด</span>
+      <span><b class="num"><span id="tick-tq">0</span> <i>Nm</i></b>แรงบิด</span>
+      <span><b class="num"><span id="tick-ac">0</span> <i>วิ</i></b>0–100 กม./ชม.</span>
+      <span><b class="num"><span id="tick-md">0</span> <i>รุ่น</i></b>ให้เลือกเปรียบเทียบ</span>`;
+    if (window.FX) {
+      FX.countUp(document.getElementById("tick-hp"), top.power_hp);
+      FX.countUp(document.getElementById("tick-tq"), top.torque_nm);
+      FX.countUp(document.getElementById("tick-ac"), top.accel);
+      FX.countUp(document.getElementById("tick-md"), cars.length);
+    }
+
+    // HUD สเปคลอยรอบตัวรถ + แถบรายชื่อรุ่นวิ่ง (marquee) ขอบล่าง hero
+    document.getElementById("hud-1").innerHTML = `${top.power_hp} <i>HP</i>`;
+    document.getElementById("hud-2").innerHTML = `${top.torque_nm} <i>Nm</i>`;
+    document.getElementById("hud-3").innerHTML = `${top.accel} <i>วิ · 0–100</i>`;
+    const seq = cars
+      .map((c) => `<b>${c.name}</b><span class="sl">//</span><span>${c.power_hp} HP · เริ่มต้น ${baht(c.price)}</span>`)
+      .join('<span class="sl">///</span>');
+    document.getElementById("marquee-track").innerHTML =
+      `<span class="seq">${seq}</span><span class="seq">${seq}</span>`;
 
     grid.setAttribute("aria-busy", "false");
     grid.innerHTML = cars
@@ -56,6 +72,7 @@ async function initHome() {
       })
       .join("");
     initCarVisuals();
+    if (window.FX) FX.bindCardFX(grid);
   } catch (err) {
     grid.innerHTML = `<p class="muted">${err.message}</p>`;
   }
