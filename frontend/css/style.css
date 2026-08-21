@@ -728,3 +728,112 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.022); }
   .hud { display: none; }
   .hero.cinema { min-height: auto; padding-bottom: 88px; }
 }
+
+/* =========================================================
+   ระบบสมาชิก (Authentication / User Management)
+   ========================================================= */
+
+.auth-zone { display: flex; align-items: center; gap: 8px; margin-left: 12px; }
+.btn-sm { min-height: 38px; padding: 0 14px; font-size: 14px; }
+
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--surface-2);
+  transition: border-color 0.2s ease;
+}
+.user-pill:hover { text-decoration: none; border-color: var(--accent); }
+.user-pill.active { border-color: var(--accent); background: var(--accent-soft); }
+.user-pill .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+.user-pill .who { display: flex; flex-direction: column; line-height: 1.15; }
+.user-pill .who b { font-size: 14px; font-weight: 600; }
+.user-pill .who small { font-size: 11px; color: var(--text-dim); }
+
+/* กล่องฟอร์มกลางหน้า (ล็อกอิน / สมัครสมาชิก) */
+.auth-shell { width: min(460px, 100%); margin-inline: auto; }
+.auth-shell .card { padding: var(--space-3); }
+.auth-shell .foot { text-align: center; color: var(--text-dim); font-size: 14px; margin-top: var(--space-2); }
+
+/* กล่องบัญชีตัวอย่างสำหรับเดโม */
+.demo-accounts {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+}
+.demo-accounts b { color: var(--text); font-family: var(--font-data); }
+.demo-accounts button {
+  background: none;
+  border: none;
+  color: var(--accent-strong);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* ไฟบอกสถานะ username ว่าง/ไม่ว่าง ในหน้าสมัครสมาชิก */
+.name-state { font-size: 13px; min-height: 19px; }
+.name-state.ok { color: var(--ok); }
+.name-state.bad { color: var(--bad); }
+.name-state.busy { color: var(--text-dim); }
+
+/* แถบเมนูย่อยในหน้าโปรไฟล์ */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: var(--space-3); }
+.tabs button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-weight: 500;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.tabs button:hover { color: var(--text); }
+.tabs button.active { color: var(--accent-strong); border-bottom-color: var(--accent); }
+
+/* ตารางผู้ใช้ (หน้าผู้ดูแลระบบ) */
+.user-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.user-table th, .user-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+.user-table th { color: var(--text-dim); font-weight: 500; white-space: nowrap; }
+.user-table tbody tr:hover { background: var(--surface-2); }
+.user-table .row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: var(--space-2); flex-wrap: wrap; }
+.pager .pages { display: flex; gap: 6px; }
+.pager .pages button {
+  min-width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+.pager .pages button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.pager .pages button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 860px) {
+  .auth-zone .user-pill .who { display: none; }
+  .auth-zone .btn-sm { padding: 0 10px; }
+}

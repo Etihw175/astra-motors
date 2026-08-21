@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บัญชีของฉัน — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=7">
+</head>
+<body>
+  <main class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">บัญชีสมาชิก</p>
+        <h2 id="pf-title">บัญชีของฉัน</h2>
+        <p id="pf-subtitle">แก้ไขข้อมูลติดต่อและรหัสผ่านของคุณ ข้อมูลนี้ใช้ยืนยันตัวตนตอนรับรถ</p>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="active" data-tab="info" role="tab">ข้อมูลส่วนตัว</button>
+        <button type="button" data-tab="password" role="tab">เปลี่ยนรหัสผ่าน</button>
+        <!-- แท็บนี้ซ่อนไว้ แสดงเฉพาะบัญชี role = admin -->
+        <button type="button" data-tab="users" role="tab" id="tab-users" class="hidden">จัดการผู้ใช้</button>
+      </div>
+
+      <!-- ---------- แท็บ 1: ข้อมูลส่วนตัว (GET /api/me, PUT /api/users/{id}) ---------- -->
+      <section data-panel="info">
+        <form id="pf-form" class="card" novalidate>
+          <div class="grid grid-2">
+            <div class="field">
+              <label for="pf-username">Username</label>
+              <input type="text" id="pf-username" disabled>
+              <p class="hint">username เปลี่ยนไม่ได้หลังสมัครแล้ว</p>
+            </div>
+            <div class="field">
+              <label for="pf-role">สิทธิ์การใช้งาน</label>
+              <input type="text" id="pf-role" disabled>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="pf-fullname">ชื่อ-นามสกุล</label>
+            <input type="text" id="pf-fullname" required autocomplete="name">
+            <p class="error">กรุณากรอกชื่อ-นามสกุล</p>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="field">
+              <label for="pf-email">อีเมล</label>
+              <input type="email" id="pf-email" required autocomplete="email">
+              <p class="error">รูปแบบอีเมลไม่ถูกต้อง</p>
+            </div>
+            <div class="field">
+              <label for="pf-phone">เบอร์โทรศัพท์</label>
+              <input type="tel" id="pf-phone" required autocomplete="tel" inputmode="tel">
+              <p class="error">กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก</p>
+            </div>
+          </div>
+
+          <p class="muted small" id="pf-meta"></p>
+          <button type="submit" class="btn btn-primary mt-2" id="pf-submit">บันทึกการแก้ไข</button>
+        </form>
+      </section>
+
+      <!-- ---------- แท็บ 2: เปลี่ยนรหัสผ่าน (POST /api/change-password) ---------- -->
+      <section data-panel="password" class="hidden">
+        <form id="pw-form" class="card auth-shell" novalidate>
+          <div class="field">
+            <label for="pw-current">รหัสผ่านปัจจุบัน</label>
+            <input type="password" id="pw-current" required autocomplete="current-password">
+            <p class="error">กรุณากรอกรหัสผ่านปัจจุบัน</p>
+          </div>
+          <div class="field">
+            <label for="pw-new">รหัสผ่านใหม่</label>
+            <input type="password" id="pw-new" required autocomplete="new-password">
+            <p class="hint">อย่างน้อย 8 ตัวอักษร ต้องมีทั้งตัวอักษรและตัวเลข</p>
+            <p class="error">รหัสผ่านใหม่ยังไม่ผ่านเกณฑ์</p>
+          </div>
+          <div class="field">
+            <label for="pw-new2">ยืนยันรหัสผ่านใหม่</label>
+            <input type="password" id="pw-new2" required autocomplete="new-password">
+            <p class="error">รหัสผ่านทั้งสองช่องไม่ตรงกัน</p>
+          </div>
+          <p class="muted small">เพื่อความปลอดภัย ระบบจะออกจากระบบทุกอุปกรณ์หลังเปลี่ยนรหัสผ่านสำเร็จ</p>
+          <button type="submit" class="btn btn-primary btn-block mt-2" id="pw-submit">เปลี่ยนรหัสผ่าน</button>
+        </form>
+      </section>
+
+      <!-- ---------- แท็บ 3: จัดการผู้ใช้ เฉพาะ admin (GET /api/users?page=) ---------- -->
+      <section data-panel="users" class="hidden">
+        <div class="card">
+          <div class="grid grid-2">
+            <div class="field">
+              <label for="us-q">ค้นหา</label>
+              <input type="search" id="us-q" placeholder="username, ชื่อ หรืออีเมล">
+            </div>
+            <div class="field">
+              <label for="us-role">กรองตามสิทธิ์</label>
+              <select id="us-role">
+                <option value="">ทั้งหมด</option>
+                <option value="customer">สมาชิก (customer)</option>
+                <option value="admin">ผู้ดูแลระบบ (admin)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>ID</th><th>Username</th><th>ชื่อ-นามสกุล</th>
+                  <th>อีเมล</th><th>สิทธิ์</th><th>สถานะ</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="us-rows"></tbody>
+            </table>
+          </div>
+          <div class="pager">
+            <span class="muted small" id="us-summary"></span>
+            <div class="pages" id="us-pages"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/js/api.js?v=7"></script>
+  <script src="/js/ui.js?v=7"></script>
+  <script src="/js/fx.js?v=7"></script>
+  <script src="/js/profile.js?v=7"></script>
+</body>
+</html>

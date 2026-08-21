@@ -22,9 +22,58 @@ function renderHeader(activeKey) {
        <div class="container bar">
          <a class="brand" href="/">ASTRA<span class="tick">/</span>MOTORS</a>
          <nav class="site-nav" aria-label="เมนูหลัก">${nav}</nav>
+         <div class="auth-zone" id="auth-zone"></div>
        </div>
      </header>`
   );
+  renderAuthZone(activeKey);
+}
+
+/* ---------- แถบสมาชิกมุมขวาบน (ขึ้นกับสถานะล็อกอิน) ---------- */
+
+function renderAuthZone(activeKey) {
+  const zone = document.getElementById("auth-zone");
+  if (!zone || typeof Auth === "undefined") return;
+
+  const user = Auth.user();
+  if (!Auth.isLoggedIn() || !user) {
+    zone.innerHTML =
+      `<a class="btn btn-ghost btn-sm" href="/pages/login.html">เข้าสู่ระบบ</a>
+       <a class="btn btn-primary btn-sm" href="/pages/register.html">สมัครสมาชิก</a>`;
+    return;
+  }
+
+  const initial = (user.full_name || user.username || "?").trim().charAt(0);
+  zone.innerHTML = `
+    <a class="user-pill ${activeKey === "profile" ? "active" : ""}" href="/pages/profile.html"
+       title="โปรไฟล์ของฉัน">
+      <span class="avatar" aria-hidden="true">${initial}</span>
+      <span class="who">
+        <b>${user.full_name || user.username}</b>
+        <small>${user.role === "admin" ? "ผู้ดูแลระบบ" : "สมาชิก"}</small>
+      </span>
+    </a>
+    <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">ออกจากระบบ</button>`;
+
+  document.getElementById("btn-logout").addEventListener("click", async () => {
+    try {
+      await API.logout();
+    } catch {
+      /* token หมดอายุอยู่แล้วก็ถือว่าออกจากระบบสำเร็จ */
+    }
+    Auth.clear();
+    toast("ออกจากระบบเรียบร้อย", "ok");
+    setTimeout(() => (location.href = "/"), 600);
+  });
+}
+
+/* ---------- บังคับให้ล็อกอินก่อนเข้าหน้าที่ต้องใช้สิทธิ์ ---------- */
+
+function requireLogin(nextPath) {
+  if (Auth.isLoggedIn()) return true;
+  const next = encodeURIComponent(nextPath || location.pathname);
+  location.href = `/pages/login.html?next=${next}`;
+  return false;
 }
 
 function renderFooter() {

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=7">
+</head>
+<body>
+  <main class="section">
+    <div class="container">
+      <div class="auth-shell">
+        <div class="section-head text-center">
+          <p class="eyebrow">บัญชีสมาชิก</p>
+          <h2>เข้าสู่ระบบ</h2>
+          <p>เข้าสู่ระบบเพื่อดูใบจอง สถานะสินเชื่อ และจัดการข้อมูลส่วนตัวของคุณ</p>
+        </div>
+
+        <form id="login-form" class="card" novalidate>
+          <div class="field">
+            <label for="li-username">Username หรืออีเมล</label>
+            <input type="text" id="li-username" required autocomplete="username" autofocus>
+            <p class="error">กรุณากรอก username หรืออีเมล</p>
+          </div>
+
+          <div class="field">
+            <label for="li-password">รหัสผ่าน</label>
+            <input type="password" id="li-password" required autocomplete="current-password">
+            <p class="error">กรุณากรอกรหัสผ่าน</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="li-submit">เข้าสู่ระบบ</button>
+
+          <div class="demo-accounts mt-2">
+            บัญชีตัวอย่างสำหรับทดสอบ —
+            <b>admin</b> / admin1234 <button type="button" data-fill="admin|admin1234">ใช้บัญชีนี้</button> ·
+            <b>somchai</b> / somchai123 <button type="button" data-fill="somchai|somchai123">ใช้บัญชีนี้</button>
+          </div>
+        </form>
+
+        <p class="foot">ยังไม่มีบัญชี? <a href="/pages/register.html">สมัครสมาชิกฟรี</a></p>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js?v=7"></script>
+  <script src="/js/ui.js?v=7"></script>
+  <script src="/js/fx.js?v=7"></script>
+  <script src="/js/login.js?v=7"></script>
+</body>
+</html>
