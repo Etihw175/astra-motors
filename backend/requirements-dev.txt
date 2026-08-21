@@ -1,0 +1,4 @@
+# แพ็กเกจสำหรับรันเทสต์เท่านั้น (ไม่ต้องติดตั้งใน image ตอน deploy)
+-r requirements.txt
+pytest==8.3.4
+httpx==0.28.1
