@@ -1,26 +1,50 @@
+# รันทั้งระบบด้วยคำสั่งเดียว: docker compose up --build
+# - web = FastAPI (serve ทั้ง REST API และไฟล์ frontend ในคอนเทนเนอร์เดียว)
+# - db  = PostgreSQL สำหรับย้ายข้อมูลจาก in-memory ลงฐานข้อมูลจริงในขั้นถัดไป
 services:
   web:
     build:
       context: .                    # ต้องเป็น root เพื่อให้ Dockerfile เห็นทั้ง backend/ และ frontend/
       dockerfile: backend/Dockerfile
+    container_name: astra-web
     ports:
       - "8000:8000"
+    environment:
+      # ค่าเริ่มต้นทำให้ `docker compose up` รันได้เลยแม้ยังไม่ได้สร้างไฟล์ .env
+      DATABASE_URL: ${DATABASE_URL:-postgresql://appuser:apppassword@db:5432/appdb}
     volumes:
       - ./backend/app:/app/app       # แก้โค้ด backend เห็นผลทันที (--reload)
       - ./frontend:/app/frontend     # แก้ไฟล์ frontend เห็นผลทันที ไม่ต้อง build ใหม่
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      db:
+        condition: service_healthy   # รอ Postgres พร้อมก่อนค่อยสตาร์ต API
+    healthcheck:
+      # ใช้ python เช็คเองเพราะ image python:3.12-slim ไม่มี curl ติดมา
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
-  # ---- สัปดาห์ที่ 2: เปิดใช้ PostgreSQL โดยลบ comment ด้านล่าง ----
-  # db:
-  #   image: postgres:16
-  #   environment:
-  #     POSTGRES_USER: appuser
-  #     POSTGRES_PASSWORD: apppassword
-  #     POSTGRES_DB: appdb
-  #   volumes:
-  #     - db_data:/var/lib/postgresql/data
-  #   ports:
-  #     - "5433:5432"    # ใช้ 5433 ฝั่งเครื่องเรา กัน conflict กับ Postgres ที่ติดตั้งไว้แล้ว
+  db:
+    image: postgres:16
+    container_name: astra-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-appuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apppassword}
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"    # ใช้ 5433 ฝั่งเครื่องเรา กัน conflict กับ Postgres ที่ติดตั้งไว้แล้ว
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-appuser} -d ${POSTGRES_DB:-appdb}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
 
-# volumes:
-#   db_data:
+volumes:
+  db_data:      # ข้อมูล Postgres อยู่ใน volume ปิดคอนเทนเนอร์แล้วข้อมูลไม่หาย
