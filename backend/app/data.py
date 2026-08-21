@@ -206,3 +206,41 @@ DELIVERY_DOCUMENTS = [
     "สลิปเงินเดือน/หลักฐานรายได้ 3 เดือนล่าสุด",
     "สมุดบัญชีธนาคารสำหรับหักค่างวดอัตโนมัติ",
 ]
+
+
+# ---------- ผู้ใช้งานระบบ (Authentication / User Management) ----------
+# เก็บใน memory เหมือนข้อมูลส่วนอื่นของสัปดาห์นี้ — restart แล้วกลับไปเหลือเฉพาะบัญชีตัวอย่างด้านล่าง
+# โครงสร้าง: USERS[user_id] = {..., "password_hash": "pbkdf2_sha256$..."} (ไม่เก็บรหัสผ่านจริง)
+USERS: dict[int, dict] = {}
+
+# ตัวนับ id อัตโนมัติ (แทน SERIAL/AUTO_INCREMENT ของฐานข้อมูลจริง)
+USER_SEQ = {"value": 0}
+
+# บัญชีตัวอย่างสำหรับเดโม — รหัสผ่านจะถูกแฮชตอนแอปเริ่มทำงาน (ดู security.seed_users)
+# ห้ามใช้รูปแบบนี้กับระบบจริง! เป็นข้อมูลจำลองสำหรับการเรียนการสอนเท่านั้น
+SEED_USERS = [
+    {
+        "username": "admin",
+        "password": "admin1234",
+        "full_name": "ผู้ดูแลระบบ ASTRA",
+        "email": "admin@astramotors.demo",
+        "phone": "0800000000",
+        "role": "admin",
+    },
+    {
+        "username": "somchai",
+        "password": "somchai123",
+        "full_name": "สมชาย ใจดี",
+        "email": "somchai@example.com",
+        "phone": "0812345678",
+        "role": "customer",
+    },
+    {
+        "username": "nattaya",
+        "password": "nattaya123",
+        "full_name": "ณัฐญา พงศ์ไพบูลย์",
+        "email": "nattaya@example.com",
+        "phone": "0899876543",
+        "role": "customer",
+    },
+]

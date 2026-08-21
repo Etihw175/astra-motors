@@ -4,15 +4,21 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routers import bookings, cars, finance, loans, showrooms
+from .routers import auth, bookings, cars, finance, loans, showrooms, users
+from .security import seed_users
 
 app = FastAPI(
     title="ASTRA Motors API",
     description="API จำลองสำหรับระบบเปรียบเทียบรถ จองทดลองขับ และจอง/ขอสินเชื่อออนไลน์ "
-                "(User Journey #15 ยานยนต์)",
-    version="0.1.0",
+                "(User Journey #15 ยานยนต์) พร้อมระบบสมาชิกและจัดการผู้ใช้ (Authentication / User Management)",
+    version="0.2.0",
 )
 
+# สร้างบัญชีตัวอย่างตอนแอปเริ่มทำงาน (admin / somchai / nattaya)
+seed_users()
+
+app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(cars.router)
 app.include_router(showrooms.router)
 app.include_router(finance.router)

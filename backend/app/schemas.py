@@ -1,5 +1,5 @@
 # Pydantic schemas — รูปแบบข้อมูลรับ-ส่งผ่าน API (validate อัตโนมัติทุก endpoint)
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 
 
@@ -40,3 +40,63 @@ class LoanCreate(BaseModel):
     monthly_income: int = Field(..., gt=0)
     documents: list[str] = Field(default=[], description="ชื่อไฟล์เอกสารที่แนบ (จำลอง)")
     consent_pdpa: bool = Field(..., description="ยินยอมให้ใช้ข้อมูลตาม PDPA")
+
+
+# ---------- Authentication / User Management ----------
+# Pydantic ตรวจความถูกต้องให้อัตโนมัติ ถ้าผิดเงื่อนไข FastAPI ตอบ 422 พร้อมบอกฟิลด์ที่ผิดเอง
+
+class RegisterCreate(BaseModel):
+    username: str = Field(..., min_length=4, max_length=20,
+                          description="a-z, 0-9, _ และ . เท่านั้น")
+    password: str = Field(..., min_length=8, max_length=72)
+    full_name: str = Field(..., min_length=2, max_length=100)
+    email: EmailStr
+    phone: str = Field(..., min_length=9, max_length=15)
+
+
+class LoginCreate(BaseModel):
+    username: str = Field(..., min_length=1, description="ใช้ username หรืออีเมลก็ได้")
+    password: str = Field(..., min_length=1)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=72)
+
+
+class UserUpdate(BaseModel):
+    """แก้ไขข้อมูล user — ส่งมาเฉพาะฟิลด์ที่ต้องการแก้ (ฟิลด์ที่ไม่ส่งมาจะไม่ถูกแตะ)"""
+    full_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(None, min_length=9, max_length=15)
+    role: Optional[str] = Field(None, description="customer หรือ admin (เฉพาะผู้ดูแลระบบแก้ได้)")
+    is_active: Optional[bool] = Field(None, description="ระงับ/เปิดใช้งานบัญชี (เฉพาะผู้ดูแลระบบ)")
+
+
+class UserOut(BaseModel):
+    """รูปแบบข้อมูล user ที่ส่งออก — ไม่มี password_hash เด็ดขาด"""
+    id: int
+    username: str
+    full_name: str
+    email: str
+    phone: str
+    role: str
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+
+class UserPage(BaseModel):
+    """ผลลัพธ์แบบแบ่งหน้า (pagination) ของ GET /api/users"""
+    items: list[UserOut]
+    page: int
+    per_page: int
+    total: int
+    total_pages: int
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_at: str
+    user: UserOut
