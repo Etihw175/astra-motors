@@ -24,6 +24,60 @@ def _monthly_payment(principal: int, flat_rate: float, term_months: int) -> int:
     return round((principal + interest_total) / term_months)
 
 
+def _affordable_principal(income: int, flat_rate: float, term_months: int) -> int:
+    """ยอดจัดไฟแนนซ์สูงสุดที่ยังผ่อนไม่เกิน 40% ของรายได้ต่อเดือน (แก้สมการ flat rate ย้อนกลับ)"""
+    budget = income * MAX_INSTALLMENT_RATIO * term_months
+    return int(budget / (1 + flat_rate / 100 * term_months / 12))
+
+
+def _build_alternatives(record: dict) -> list[str]:
+    """สินเชื่อไม่ผ่าน — คำนวณทางเลือกเป็นตัวเลขจริง ไม่ใช่คำแนะนำลอย ๆ"""
+    plan = record["plan"]
+    income = record["monthly_income"]
+    options: list[str] = []
+
+    # ทางเลือกที่ 1: เพิ่มเงินดาวน์ (ปัดขึ้นหลักหมื่นให้เป็นตัวเลขที่คุยกันจริงได้)
+    affordable = _affordable_principal(income, plan["flat_rate"], record["term_months"])
+    if 0 < affordable < record["principal"]:
+        extra_down = record["principal"] - affordable
+        extra_down = -(-extra_down // 10_000) * 10_000
+        new_monthly = _monthly_payment(record["principal"] - extra_down,
+                                       plan["flat_rate"], record["term_months"])
+        options.append(
+            f"เพิ่มเงินดาวน์อีกประมาณ {extra_down:,} บาท "
+            f"(รวมดาวน์ {record['down_payment'] + extra_down:,} บาท) "
+            f"ยอดผ่อนจะลดเหลือประมาณ {new_monthly:,} บาท/เดือน"
+        )
+
+    # ทางเลือกที่ 2: ยืดงวดผ่อนให้ยาวขึ้นภายในแผนเดิม
+    for term in sorted(plan["terms"]):
+        if term <= record["term_months"]:
+            continue
+        monthly = _monthly_payment(record["principal"], plan["flat_rate"], term)
+        if monthly <= income * MAX_INSTALLMENT_RATIO:
+            options.append(
+                f"ยืดระยะผ่อนจาก {record['term_months']} งวด เป็น {term} งวด "
+                f"ยอดผ่อนจะเหลือประมาณ {monthly:,} บาท/เดือน"
+            )
+            break
+
+    # ทางเลือกที่ 3: เปลี่ยนไปสถาบันที่ดอกเบี้ยต่ำกว่าและผ่านเกณฑ์
+    for other in sorted(FINANCE_PLANS, key=lambda p: p["flat_rate"]):
+        if other["id"] == plan["id"]:
+            continue
+        term = max(other["terms"])
+        monthly = _monthly_payment(record["principal"], other["flat_rate"], term)
+        if monthly <= income * MAX_INSTALLMENT_RATIO:
+            options.append(
+                f"เปลี่ยนไปแผน {other['name']} ดอกเบี้ย {other['flat_rate']}% ผ่อน {term} งวด "
+                f"ยอดผ่อนประมาณ {monthly:,} บาท/เดือน"
+            )
+            break
+
+    options.append("เพิ่มผู้กู้ร่วม (co-borrower) เพื่อเพิ่มฐานรายได้รวมในการพิจารณา")
+    return options
+
+
 @router.post("", status_code=201)
 def create_loan(body: LoanCreate):
     reservation = RESERVATIONS.get(body.reservation_code)
@@ -100,10 +154,7 @@ def get_loan(loan_id: str):
                     "message": "ภาระผ่อนต่อเดือนสูงเกินเกณฑ์เมื่อเทียบกับรายได้",
                     "ratio_pct": round(ratio * 100),
                     "max_ratio_pct": round(MAX_INSTALLMENT_RATIO * 100),
-                    "alternatives": [
-                        "เพิ่มเงินดาวน์ เพื่อลดยอดจัดไฟแนนซ์และยอดผ่อนต่อเดือน",
-                        "เพิ่มผู้กู้ร่วม (co-borrower) เพื่อเพิ่มฐานรายได้รวม",
-                        "เลือกสถาบันการเงินอื่นที่รองรับระยะผ่อนยาวขึ้น (สูงสุด 84 งวด)",
-                    ],
+                    "max_monthly_affordable": round(record["monthly_income"] * MAX_INSTALLMENT_RATIO),
+                    "alternatives": _build_alternatives(record),
                 }
     return record
