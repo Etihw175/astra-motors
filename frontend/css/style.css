@@ -265,7 +265,7 @@ tr.dim td { color: var(--text-dim); opacity: 0.55; }
 .field.invalid input, .field.invalid select { border-color: var(--bad); }
 
 input[type="text"], input[type="tel"], input[type="email"], input[type="number"],
-input[type="date"], input[type="file"], select {
+input[type="password"], input[type="search"], input[type="date"], input[type="file"], select {
   width: 100%;
   min-height: 46px;
   padding: 10px 14px;
@@ -279,6 +279,18 @@ input[type="date"], input[type="file"], select {
   color-scheme: dark; /* ให้ date picker เป็นโทนมืด */
 }
 input:focus, select:focus { border-color: var(--accent); outline: none; }
+input::placeholder { color: var(--text-dim); opacity: 1; }
+
+/* กัน Chrome/Edge ทาพื้นหลังขาวทับช่องที่ autofill รหัสผ่าน/อีเมลให้ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
+  box-shadow: 0 0 0 1000px var(--surface-2) inset;
+  caret-color: var(--text);
+  transition: background-color 9999s ease-in-out 0s;
+}
 
 .check {
   display: flex;
