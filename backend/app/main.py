@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routers import auth, bookings, cars, finance, loans, showrooms, users
+from .routers import auth, bookings, cars, finance, loans, showrooms, simulation, users
 from .security import seed_users
 
 app = FastAPI(
@@ -24,6 +24,7 @@ app.include_router(showrooms.router)
 app.include_router(finance.router)
 app.include_router(bookings.router)
 app.include_router(loans.router)
+app.include_router(simulation.router)
 
 
 @app.get("/api/health")

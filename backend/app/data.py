@@ -15,6 +15,19 @@ CARS = [
         "seats": 4,
         "fuel": "8.5 กม./ลิตร",
         "accel": 2.8,
+        # ค่าจำลองสำหรับหน้า "ถนนไทย" — ระยะต่ำสุดใต้ท้อง, ระบบยกหน้า, ล้อ/ยาง, ถังน้ำมัน
+        "road": {
+            "ground_clearance_mm": 110,
+            "front_lift_mm": 0,          # R35 ไม่มีระบบยกหน้าจากโรงงาน
+            "front_lift_option": None,
+            "wheel_inch": 20,
+            "tire_aspect": 35,           # ยางแก้มเตี้ย ยิ่งตัวเลขน้อยยิ่งเสี่ยงล้อคด
+            "fuel_tank_l": 74,
+            "fuel_grade": "เบนซิน 95",
+            "city_kmpl": 5.6,
+            "highway_kmpl": 11.5,
+            "drive_code": "awd",
+        },
         "safety": "ระบบช่วยขับ + โหมดสนามแข่ง",
         "warranty": "3 ปี / 100,000 กม.",
         "colors": [
@@ -44,6 +57,18 @@ CARS = [
         "seats": 4,
         "fuel": "11.2 กม./ลิตร",
         "accel": 3.7,
+        "road": {
+            "ground_clearance_mm": 110,
+            "front_lift_mm": 40,
+            "front_lift_option": "front-lift",
+            "wheel_inch": 20,
+            "tire_aspect": 30,
+            "fuel_tank_l": 67,
+            "fuel_grade": "เบนซิน 95",
+            "city_kmpl": 8.0,
+            "highway_kmpl": 14.5,
+            "drive_code": "rwd",
+        },
         "safety": "Porsche Active Safe + ระบบช่วยขับครบ",
         "warranty": "4 ปี / ไม่จำกัดระยะทาง",
         "colors": [
@@ -53,6 +78,7 @@ CARS = [
             {"id": "gentian-blue", "name": "น้ำเงิน Gentian Blue", "hex": "#1F3B70", "extra": 100000, "stock": "in_stock"},
         ],
         "options": [
+            {"id": "front-lift", "name": "ระบบยกหน้ารถ (Front Lift)", "price": 380000},
             {"id": "sport-chrono", "name": "แพ็กเกจ Sport Chrono", "price": 350000},
             {"id": "pccb", "name": "เบรกเซรามิก PCCB", "price": 620000},
             {"id": "burmester", "name": "เครื่องเสียง Burmester", "price": 390000},
@@ -73,6 +99,18 @@ CARS = [
         "seats": 2,
         "fuel": "7.8 กม./ลิตร",
         "accel": 2.9,
+        "road": {
+            "ground_clearance_mm": 115,
+            "front_lift_mm": 45,
+            "front_lift_option": "front-lift",
+            "wheel_inch": 20,
+            "tire_aspect": 30,
+            "fuel_tank_l": 80,
+            "fuel_grade": "เบนซิน 95",
+            "city_kmpl": 5.2,
+            "highway_kmpl": 10.4,
+            "drive_code": "awd",
+        },
         "safety": "โหมดขับขี่ ANIMA 3 โหมด + ESC",
         "warranty": "3 ปี / ไม่จำกัดระยะทาง",
         "colors": [
@@ -102,6 +140,18 @@ CARS = [
         "seats": 2,
         "fuel": "8.7 กม./ลิตร",
         "accel": 3.0,
+        "road": {
+            "ground_clearance_mm": 115,
+            "front_lift_mm": 40,
+            "front_lift_option": "front-lift",
+            "wheel_inch": 20,
+            "tire_aspect": 30,
+            "fuel_tank_l": 78,
+            "fuel_grade": "เบนซิน 95",
+            "city_kmpl": 5.8,
+            "highway_kmpl": 11.6,
+            "drive_code": "rwd",
+        },
         "safety": "Side Slip Control 2 + F1-Trac",
         "warranty": "3 ปี + Genuine Maintenance 7 ปี",
         "colors": [
@@ -244,3 +294,42 @@ SEED_USERS = [
         "role": "customer",
     },
 ]
+
+
+# ---------- สถานการณ์จำลองการใช้งานบนถนนไทย ----------
+# ตัวเลขทั้งหมดเป็นค่าจำลองเพื่อการศึกษา ไม่ใช่ข้อมูลรับรองจากผู้ผลิต
+
+FUEL_PRICE_DEFAULT = 41.5      # บาท/ลิตร (เบนซิน 95 โดยประมาณ)
+KM_PER_YEAR_DEFAULT = 12000
+TRAFFIC_SHARE_DEFAULT = 60     # % ระยะทางที่วิ่งในเมือง/รถติด
+
+# ระยะทางอ้างอิงสำหรับคำนวณจำนวนครั้งที่ต้องเติมน้ำมัน
+TRIP_BKK_CHIANGMAI_KM = 690
+
+THAI_ROAD_PRESETS = {
+    "floods": [
+        {"id": "dry", "label": "ถนนแห้ง", "depth_cm": 0},
+        {"id": "puddle", "label": "น้ำขังผิวถนน (ฝนเพิ่งหยุด)", "depth_cm": 5},
+        {"id": "soi", "label": "น้ำรอระบายในซอย", "depth_cm": 15},
+        {"id": "heavy", "label": "ฝนตกหนัก น้ำท่วมขังถนนใหญ่", "depth_cm": 25},
+        {"id": "flood", "label": "น้ำท่วมสูง (ระดับกลางล้อ)", "depth_cm": 40},
+    ],
+    "bumps": [
+        {"id": "flat", "label": "ไม่มีเนิน", "height_cm": 0},
+        {"id": "ramp", "label": "ทางลาดเข้าห้าง/คอนโด", "height_cm": 9},
+        {"id": "bump", "label": "ลูกระนาดหมู่บ้าน", "height_cm": 12},
+        {"id": "hump", "label": "เนินชะลอความเร็วแบบสูง", "height_cm": 15},
+        {"id": "bridge", "label": "คอสะพาน/รอยต่อถนนยกระดับ", "height_cm": 18},
+    ],
+    "roads": [
+        {"id": "expressway", "label": "ทางด่วน/มอเตอร์เวย์ ผิวเรียบ", "rough": 0},
+        {"id": "city", "label": "ถนนในเมือง มีรอยปะและฝาท่อ", "rough": 1},
+        {"id": "upcountry", "label": "ถนนต่างจังหวัด มีหลุมบ่อ", "rough": 2},
+        {"id": "narrow-soi", "label": "ซอยแคบ ผิวถนนชำรุด", "rough": 3},
+    ],
+    "defaults": {
+        "fuel_price": FUEL_PRICE_DEFAULT,
+        "km_per_year": KM_PER_YEAR_DEFAULT,
+        "traffic_share_pct": TRAFFIC_SHARE_DEFAULT,
+    },
+}

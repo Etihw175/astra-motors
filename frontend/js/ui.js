@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { key: "home", label: "หน้าแรก", href: "/" },
   { key: "compare", label: "เปรียบเทียบรุ่น", href: "/pages/compare.html" },
   { key: "finance", label: "คำนวณไฟแนนซ์", href: "/pages/finance.html" },
+  { key: "thai-road", label: "ถนนไทย", href: "/pages/thai-road.html" },
   { key: "testdrive", label: "จองทดลองขับ", href: "/pages/test-drive.html" },
   { key: "status", label: "การจองของฉัน", href: "/pages/status.html" },
 ];

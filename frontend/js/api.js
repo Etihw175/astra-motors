@@ -75,6 +75,10 @@ const API = {
   createLoan: (body) => _api("/api/loans", { method: "POST", body: JSON.stringify(body) }),
   loan: (id) => _api(`/api/loans/${encodeURIComponent(id)}`),
 
+  /* ---------- จำลองการใช้งานบนถนนไทย ---------- */
+  simulationConditions: () => _api("/api/simulation/conditions"),
+  simulate: (body) => _api("/api/simulation", { method: "POST", body: JSON.stringify(body) }),
+
   /* ---------- ระบบสมาชิก (Authentication) ---------- */
   register: (body) => _api("/api/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body) => _api("/api/login", { method: "POST", body: JSON.stringify(body) }),

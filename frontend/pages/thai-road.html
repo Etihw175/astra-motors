@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จำลองการใช้งานบนถนนไทย — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=9">
+</head>
+<body>
+  <main class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">ก่อนตัดสินใจ — สภาพการใช้งานจริง</p>
+        <h2>รถคันนี้อยู่รอดบนถนนไทยไหม</h2>
+        <p>ลองปรับสถานการณ์ที่คุณเจอจริง — น้ำท่วมซอย ลูกระนาดหน้าหมู่บ้าน ถนนต่างจังหวัดเป็นหลุม
+          รถติดกี่เปอร์เซ็นต์ของระยะทาง — แล้วดูว่าแต่ละรุ่นรับไหวแค่ไหน และค่าน้ำมันต่อเดือนเท่าไร</p>
+      </div>
+
+      <div class="card">
+        <h3>1. เลือกรุ่นที่สนใจ</h3>
+        <div class="chip-row mt-2" id="sim-cars" role="radiogroup" aria-label="เลือกรุ่นรถ"></div>
+      </div>
+
+      <div class="card">
+        <h3>2. สภาพถนนที่ต้องเจอ</h3>
+
+        <div class="field mt-2">
+          <label for="sim-flood">ระดับน้ำท่วม — <b class="num" id="sim-flood-val">0 ซม.</b></label>
+          <div class="chip-row" id="sim-flood-presets"></div>
+          <input type="range" id="sim-flood" min="0" max="60" step="1" value="0">
+        </div>
+
+        <div class="field">
+          <label for="sim-bump">ความสูงลูกระนาด / ทางลาด — <b class="num" id="sim-bump-val">0 ซม.</b></label>
+          <div class="chip-row" id="sim-bump-presets"></div>
+          <input type="range" id="sim-bump" min="0" max="25" step="1" value="0">
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="sim-road">สภาพผิวถนนที่ใช้เป็นประจำ</label>
+            <select id="sim-road"></select>
+          </div>
+          <div class="field">
+            <label>ระบบยกหน้ารถ (Front Lift)</label>
+            <label class="check">
+              <input type="checkbox" id="sim-lift">
+              <span id="sim-lift-label">เปิดใช้ระบบยกหน้ารถตอนข้ามเนิน</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>3. รูปแบบการใช้รถของคุณ</h3>
+        <div class="grid grid-3 mt-2">
+          <div class="field">
+            <label for="sim-km">ระยะทางต่อปี (กม.)</label>
+            <input type="number" id="sim-km" min="1000" max="100000" step="1000" value="12000">
+          </div>
+          <div class="field">
+            <label for="sim-price">ราคาน้ำมัน (บาท/ลิตร)</label>
+            <input type="number" id="sim-price" min="20" max="80" step="0.5" value="41.5">
+          </div>
+          <div class="field">
+            <label for="sim-traffic">วิ่งในเมือง/รถติด — <b class="num" id="sim-traffic-val">60%</b></label>
+            <input type="range" id="sim-traffic" min="0" max="100" step="5" value="60">
+          </div>
+        </div>
+      </div>
+
+      <!-- ผลลัพธ์ -->
+      <div id="sim-result" aria-live="polite"></div>
+
+      <p class="muted small text-center mt-2" id="sim-disclaimer"></p>
+    </div>
+  </main>
+
+  <script src="/js/api.js?v=9"></script>
+  <script src="/js/ui.js?v=9"></script>
+  <script src="/js/fx.js?v=9"></script>
+  <script src="/js/thai-road.js?v=9"></script>
+</body>
+</html>

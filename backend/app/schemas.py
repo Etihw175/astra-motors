@@ -100,3 +100,16 @@ class TokenOut(BaseModel):
     token_type: str = "bearer"
     expires_at: str
     user: UserOut
+
+
+# ---------- จำลองการใช้งานบนถนนไทย ----------
+
+class SimulationCreate(BaseModel):
+    car_id: str
+    flood_depth_cm: float = Field(0, ge=0, le=100, description="ระดับน้ำท่วม (ซม.)")
+    bump_height_cm: float = Field(0, ge=0, le=40, description="ความสูงของลูกระนาด/ทางลาด (ซม.)")
+    road_rough: int = Field(0, ge=0, le=3, description="สภาพผิวถนน 0=เรียบ ถึง 3=ชำรุดหนัก")
+    front_lift: bool = Field(False, description="เปิดใช้ระบบยกหน้ารถ (ถ้ารุ่นนั้นมี)")
+    km_per_year: int = Field(12000, ge=1000, le=100000, description="ระยะทางที่ใช้ต่อปี (กม.)")
+    traffic_share_pct: int = Field(60, ge=0, le=100, description="สัดส่วนระยะทางที่วิ่งในเมือง/รถติด (%)")
+    fuel_price: float = Field(41.5, gt=0, le=100, description="ราคาน้ำมันต่อลิตร (บาท)")
