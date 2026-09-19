@@ -1,6 +1,8 @@
-// จองรถออนไลน์ (journey ขั้นตอน 6): สรุปสเปค → ชำระเงินจอง (จำลอง) → ใบจองอิเล็กทรอนิกส์
+// จองรถออนไลน์ (journey ขั้นตอน 5): สรุปสเปค → ชำระเงินจอง (จำลอง) → ใบจองอิเล็กทรอนิกส์
+// ต้องล็อกอินก่อน — ใบจองผูกกับบัญชี ดู/ยกเลิกได้เฉพาะเจ้าของ และได้คะแนนสะสม 2,000 คะแนน
 "use strict";
 
+requireLogin("/pages/reserve.html");
 renderHeader("home");
 renderFooter();
 
@@ -108,11 +110,11 @@ async function submit(e) {
             ? '<p class="badge badge-warn mt-1">โปรโมชั่นหมดอายุก่อนวันจอง จึงไม่ถูกรวมในใบจองนี้</p>'
             : ""
       }
-      <p class="muted small mt-2">สำเนาใบจองถูกส่งไปที่อีเมลของคุณแล้ว (จำลอง)<br>
+      <p class="muted small mt-2">สำเนาใบจองถูกส่งไปที่อีเมลของคุณแล้ว (จำลอง) · ได้รับ 2,000 คะแนนสะสม<br>
       ขั้นตอนถัดไป: ยื่นขอสินเชื่อ หรือติดต่อรับรถด้วยเงินสดที่โชว์รูม</p>
       <div class="cta-row mt-3" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
         <a class="btn btn-primary" href="/pages/loan.html">ยื่นขอสินเชื่อต่อเลย</a>
-        <a class="btn btn-ghost" href="/pages/status.html">ดูสถานะการจอง</a>
+        <a class="btn btn-ghost" href="/pages/status.html?code=${record.code}">ดูสถานะการจอง</a>
       </div>`;
     panel.scrollIntoView({ behavior: "smooth" });
   } catch (err) {
@@ -137,6 +139,7 @@ async function initReserve() {
   }
 
   document.getElementById("edit-link").href = `/pages/model.html?id=${car.id}`;
+  prefillFromUser({ "rs-name": "full_name", "rs-phone": "phone", "rs-email": "email" });
   document.getElementById("reserve-layout").classList.remove("hidden");
   renderSummary();
 

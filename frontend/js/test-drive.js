@@ -116,7 +116,9 @@ async function submit(e) {
       has_license: true,
       contact_message_only: document.getElementById("td-msg-only").checked,
     });
-    Store.save("testdrive", record);
+    // เก็บในเครื่องเฉพาะการจองแบบ guest — สมาชิกดูได้จากบัญชี (GET /api/me/bookings) อยู่แล้ว
+    if (Auth.isLoggedIn()) Store.remove("testdrive");
+    else Store.save("testdrive", record);
 
     document.getElementById("td-form").classList.add("hidden");
     const panel = document.getElementById("td-confirm");
@@ -127,8 +129,14 @@ async function submit(e) {
       <p class="code">${record.code}</p>
       <p><strong>${record.car.name}</strong> ที่ ${record.showroom.name}</p>
       <p class="muted">${thaiDate(record.date)} เวลา ${record.time} น.</p>
-      <p class="muted small mt-2">โชว์รูมได้รับแจ้งอัตโนมัติแล้ว และระบบจะแจ้งเตือนคุณก่อนถึงวันนัด<br>
+      <p class="muted small mt-2">โชว์รูมได้รับแจ้งอัตโนมัติแล้ว — คิวเวลานี้ถูกปิดไม่ให้ลูกค้าคนอื่นจองซ้ำ<br>
       กรุณานำใบขับขี่ตัวจริงมาในวันทดลองขับ</p>
+      ${
+        Auth.isLoggedIn()
+          ? '<p class="badge badge-accent mt-1">บันทึกเข้าบัญชีแล้ว · ได้รับ 100 คะแนนสะสม</p>'
+          : `<p class="small mt-1">จองแบบไม่เข้าสู่ระบบ — เก็บรหัส <b>${record.code}</b> ไว้ใช้ติดตาม/ยกเลิก
+             หรือ <a href="/pages/register.html">สมัครสมาชิก</a> ครั้งหน้าเพื่อรับแจ้งเตือนและคะแนน</p>`
+      }
       <div class="cta-row mt-3" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
         <a class="btn btn-primary" href="/pages/status.html">ดูการจองของฉัน</a>
         <a class="btn btn-ghost" href="/">กลับหน้าแรก</a>
@@ -159,6 +167,7 @@ async function initTestDrive() {
   dateInput.min = tomorrow.toISOString().slice(0, 10);
   dateInput.addEventListener("change", loadSlots);
 
+  prefillFromUser({ "td-name": "full_name", "td-phone": "phone" });
   renderCarChips();
   renderShowrooms();
   document.getElementById("td-form").addEventListener("submit", submit);

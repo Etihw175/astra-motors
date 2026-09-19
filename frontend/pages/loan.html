@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=9">
+  <link rel="stylesheet" href="/css/style.css?v=10">
 </head>
 <body>
   <main class="section">
@@ -23,8 +23,9 @@
           <h3>ใบจองที่ต้องการยื่นสินเชื่อ</h3>
           <div class="field mt-2">
             <label for="ln-code">รหัสใบจอง</label>
-            <input type="text" id="ln-code" placeholder="เช่น ADR-2607-0001" required>
-            <p class="hint">ระบบเติมให้อัตโนมัติถ้าคุณเพิ่งจองรถจากเครื่องนี้</p>
+            <input type="text" id="ln-code" placeholder="เช่น ADR-2609-7F3A9C" required list="my-codes" autocomplete="off">
+            <datalist id="my-codes"></datalist>
+            <p class="hint">เลือกจากใบจองในบัญชีของคุณได้เลย ระบบเติมใบจองล่าสุดให้อัตโนมัติ</p>
             <p class="error">ไม่พบใบจองรหัสนี้</p>
           </div>
           <div id="rsv-summary" class="muted small"></div>
@@ -84,7 +85,7 @@
         </div>
 
         <div class="card">
-          <h3>เอกสารประกอบ <span class="muted small">(จำลอง — ไฟล์ไม่ได้ถูกอัปโหลดจริง)</span></h3>
+          <h3>เอกสารประกอบ <span class="muted small">(PDF / JPG / PNG ไม่เกิน 5 MB — อัปโหลดเข้าระบบจริง)</span></h3>
           <div class="grid grid-2 mt-2">
             <div class="field">
               <label for="doc-id">สำเนาบัตรประชาชน</label>
@@ -107,9 +108,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=9"></script>
-  <script src="/js/ui.js?v=9"></script>
-  <script src="/js/fx.js?v=9"></script>
-  <script src="/js/loan.js?v=9"></script>
+  <script src="/js/api.js?v=10"></script>
+  <script src="/js/ui.js?v=10"></script>
+  <script src="/js/fx.js?v=10"></script>
+  <script src="/js/loan.js?v=10"></script>
 </body>
 </html>

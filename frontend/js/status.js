@@ -1,4 +1,5 @@
-// ติดตามสถานะ (journey ขั้นตอน 5, 7, 8): stepper การจอง + ผลสินเชื่อเรียลไทม์ + นัดรับรถ + ยกเลิก
+// ติดตามสถานะ (journey ขั้นตอน 6): รวมการจองทั้งหมดของบัญชี (GET /api/me/bookings)
+// + stepper ใบจอง + ผลสินเชื่อเรียลไทม์ + นัดรับรถ + ยกเลิก + นัดทดลองขับ/เข้าศูนย์
 "use strict";
 
 renderHeader("status");
@@ -7,6 +8,12 @@ renderFooter();
 let reservation = null;
 let loan = null;
 let pollTimer = null;
+let mine = null;
+
+const TD_BADGE = {
+  confirmed: '<span class="badge badge-ok">ยืนยันแล้ว</span>',
+  cancelled: '<span class="badge badge-bad">ยกเลิกแล้ว</span>',
+};
 
 const STATUS_BADGE = {
   reserved: '<span class="badge badge-accent">จองแล้ว — ล็อกราคาอยู่</span>',
@@ -17,9 +24,7 @@ const STATUS_BADGE = {
 function render() {
   const zone = document.getElementById("rsv-zone");
   if (!reservation) {
-    zone.innerHTML =
-      '<div class="card text-center muted">กรอกรหัสใบจองด้านบน หรือเริ่มจาก' +
-      ' <a href="/pages/compare.html">เลือกรุ่นรถ</a> แล้วจองออนไลน์</div>';
+    zone.innerHTML = "";
     return;
   }
 
@@ -151,6 +156,7 @@ function render() {
         reservation = await API.scheduleDelivery(reservation.code, dv.value);
         toast("นัดรับรถเรียบร้อย ระบบจะแจ้งเตือนก่อนถึงวันนัด", "ok");
         render();
+        refreshMine();
       } catch (err) {
         toast(err.message, "error");
       }
@@ -158,17 +164,144 @@ function render() {
   }
 }
 
-// แสดงนัดทดลองขับ (ถ้ามี) — journey ขั้นตอน 5
-function renderTestdrive() {
-  const td = Store.load("testdrive");
-  if (!td) return;
-  document.getElementById("td-zone").innerHTML = `
-    <div class="card">
-      <p class="eyebrow num">${td.code}</p>
-      <h3 style="font-size:18px">นัดทดลองขับ ${td.car.name}</h3>
-      <p class="muted small">${td.showroom.name} · ${thaiDate(td.date)} เวลา ${td.time} น. —
-      นำใบขับขี่ตัวจริงมาแสดงในวันนัด</p>
+/* ---------- รายการในบัญชี ---------- */
+
+function rsvLabel(r) {
+  if (r.status === "cancelled") return STATUS_BADGE.cancelled;
+  if (r.status === "delivery_scheduled") return STATUS_BADGE.delivery_scheduled;
+  if (r.loan && r.loan.status === "reviewing") return '<span class="badge badge-warn">สินเชื่อกำลังพิจารณา</span>';
+  if (r.loan && r.loan.status === "approved") return '<span class="badge badge-ok">สินเชื่ออนุมัติ — รอนัดรับรถ</span>';
+  if (r.loan && r.loan.status === "rejected") return '<span class="badge badge-bad">สินเชื่อไม่ผ่าน</span>';
+  return STATUS_BADGE.reserved;
+}
+
+function renderReservationList() {
+  const zone = document.getElementById("rsv-list");
+  if (!mine.reservations.length) {
+    zone.innerHTML = `<div class="card muted">ยังไม่มีใบจองในบัญชีนี้ —
+      <a href="/">เลือกรุ่นรถ</a> แล้วจองออนไลน์ได้เลย</div>`;
+    return;
+  }
+  zone.innerHTML = mine.reservations
+    .map(
+      (r) => `
+      <div class="card booking-pick ${reservation && reservation.code === r.code ? "selected" : ""}"
+           data-code="${r.code}" role="button" tabindex="0" aria-label="ดูใบจอง ${r.code}">
+        <div class="list-row" style="padding:0;border:none">
+          <div class="main">
+            <b>${esc(r.car.name)} <span class="muted" style="font-weight:400">สี${esc(r.color.name)}</span></b>
+            <span class="num">${r.code} · ${baht(r.total_price)}</span>
+          </div>
+          ${rsvLabel(r)}
+        </div>
+      </div>`
+    )
+    .join("");
+  zone.querySelectorAll(".booking-pick").forEach((el) => {
+    const open = () => {
+      loadReservation(el.dataset.code);
+      document.getElementById("rsv-zone").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    el.addEventListener("click", open);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+    });
+  });
+}
+
+function testdriveRow(td) {
+  const future = td.date > new Date().toISOString().slice(0, 10);
+  return `
+    <div class="list-row">
+      <div class="main">
+        <b>${esc(td.car.name)}</b>
+        <span>${esc(td.showroom.name)} · ${thaiDate(td.date)} เวลา ${td.time} น.</span>
+        <span class="num">${td.code}</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        ${TD_BADGE[td.status] || ""}
+        ${td.status === "confirmed" && future
+          ? `<button class="btn btn-danger btn-sm" data-cancel-td="${td.code}" type="button">ยกเลิกนัด</button>`
+          : ""}
+      </div>
     </div>`;
+}
+
+function bindTestdriveCancel(root, after) {
+  root.querySelectorAll("[data-cancel-td]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const td = await API.cancelTestdrive(btn.dataset.cancelTd);
+        toast("ยกเลิกนัดทดลองขับแล้ว คิวนี้เปิดให้คนอื่นจองต่อได้", "ok");
+        after(td);
+      } catch (err) {
+        toast(err.message, "error");
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+function renderTestdrives() {
+  const zone = document.getElementById("td-zone");
+  zone.innerHTML = mine.testdrives.length
+    ? `<div class="card list-rows">${mine.testdrives.map(testdriveRow).join("")}</div>`
+    : `<div class="card muted">ยังไม่มีนัดทดลองขับ — <a href="/pages/test-drive.html">จองทดลองขับ</a></div>`;
+  bindTestdriveCancel(zone, refreshMine);
+}
+
+function renderServices() {
+  const zone = document.getElementById("sv-zone");
+  const active = mine.service_appointments.filter((s) => s.status === "booked");
+  zone.innerHTML = active.length
+    ? `<div class="card list-rows">${active
+        .map(
+          (s) => `
+          <div class="list-row">
+            <div class="main">
+              <b>${esc(s.service_type.name)} · ${esc(s.car.name)}</b>
+              <span>${esc(s.showroom.name)} · ${thaiDate(s.date)} เวลา ${s.time} น.</span>
+            </div>
+            <a class="btn btn-ghost btn-sm" href="/pages/after-sales.html">จัดการนัด</a>
+          </div>`
+        )
+        .join("")}</div>`
+    : `<div class="card muted">ยังไม่มีนัดเข้าศูนย์ — <a href="/pages/after-sales.html">นัดเช็กระยะออนไลน์</a> รับ 100 คะแนน</div>`;
+}
+
+async function refreshMine() {
+  try {
+    mine = await API.myBookings();
+  } catch (err) {
+    return toast(err.message, "error");
+  }
+  renderReservationList();
+  renderTestdrives();
+  renderServices();
+}
+
+// ผู้ที่ยังไม่ล็อกอิน: แสดงนัดทดลองขับที่จองจากเครื่องนี้ (guest) + ชวนเข้าสู่ระบบ
+function renderGuest() {
+  const zone = document.getElementById("guest-zone");
+  const td = Store.load("testdrive");
+  zone.innerHTML = `
+    <div class="card">
+      <h3>เข้าสู่ระบบเพื่อดูการจองทั้งหมด</h3>
+      <p class="muted mt-1">ใบจองรถ สถานะสินเชื่อ และแจ้งเตือนผูกกับบัญชีของคุณ เพื่อความปลอดภัยของข้อมูลส่วนตัว</p>
+      <div class="mt-2" style="display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="/pages/login.html?next=${encodeURIComponent(location.pathname + location.search)}">เข้าสู่ระบบ</a>
+        <a class="btn btn-ghost" href="/pages/register.html">สมัครสมาชิก</a>
+      </div>
+    </div>
+    ${td ? `<h3 class="mt-3 mb-2">นัดทดลองขับที่จองจากเครื่องนี้</h3><div class="card list-rows" id="guest-td">${testdriveRow(td)}</div>` : ""}`;
+  const box = document.getElementById("guest-td");
+  if (box) {
+    bindTestdriveCancel(box, (updated) => {
+      Store.save("testdrive", updated);
+      renderGuest();
+    });
+  }
 }
 
 /* ---------- โหลดข้อมูล + poll ผลสินเชื่อ ---------- */
@@ -188,6 +321,7 @@ async function refreshLoan() {
             loan.status === "approved" ? "สินเชื่อได้รับการอนุมัติแล้ว" : "ผลสินเชื่อ: ไม่ผ่านการอนุมัติ",
             loan.status === "approved" ? "ok" : "error"
           );
+          refreshMine();   // ป้ายสถานะในรายการใบจองต้องเปลี่ยนตามผลด้วย
         }
         render();
       }, 4000);
@@ -209,6 +343,7 @@ async function loadReservation(code) {
     toast(err.message, "error");
   }
   render();
+  if (mine) renderReservationList();
 }
 
 /* ---------- Modal ยกเลิก ---------- */
@@ -224,6 +359,7 @@ document.getElementById("cancel-yes").addEventListener("click", async () => {
     reservation = await API.cancelReservation(reservation.code);
     toast("ยกเลิกใบจองแล้ว", "ok");
     render();
+    refreshMine();
   } catch (err) {
     toast(err.message, "error");
   }
@@ -231,19 +367,26 @@ document.getElementById("cancel-yes").addEventListener("click", async () => {
 
 /* ---------- เริ่มต้น ---------- */
 
-document.getElementById("st-load").addEventListener("click", () => {
-  const code = document.getElementById("st-code").value.trim();
-  if (code) loadReservation(code);
-});
-document.getElementById("st-code").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") document.getElementById("st-load").click();
-});
+async function initStatus() {
+  if (!Auth.isLoggedIn()) {
+    renderGuest();
+    return;
+  }
+  document.getElementById("member-zone").classList.remove("hidden");
 
-renderTestdrive();
-const savedCode = qs("code") || Store.load("reservation_code");
-if (savedCode) {
-  document.getElementById("st-code").value = savedCode;
-  loadReservation(savedCode);
-} else {
-  render();
+  document.getElementById("st-load").addEventListener("click", () => {
+    const code = document.getElementById("st-code").value.trim();
+    if (code) loadReservation(code);
+  });
+  document.getElementById("st-code").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("st-load").click();
+  });
+
+  await refreshMine();
+  if (!mine) return;
+  const wanted = qs("code") || Store.load("reservation_code");
+  const pick = mine.reservations.find((r) => r.code === wanted) || mine.reservations[0];
+  if (pick) loadReservation(pick.code);
 }
+
+initStatus();

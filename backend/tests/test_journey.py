@@ -1,4 +1,5 @@
-"""เทสต์ integration ครบ 7 ขั้นตอนของ User Journey ผ่าน REST API + ฐานข้อมูลจริง (SQLite ชั่วคราว)
+"""เทสต์ integration ครบ 7 ขั้นตอนของ User Journey ผ่าน REST API + ฐานข้อมูลจริง
+(SQLite ชั่วคราว หรือ PostgreSQL เมื่อตั้ง TEST_DATABASE_URL — ดู conftest.py)
 
 รันด้วย:  cd backend && pytest -q
 รับรู้ → ค้นหา → รายละเอียด → จองทดลองขับ → ซื้อออนไลน์ (+อัปโหลดเอกสาร/สินเชื่อ) → ติดตามสถานะ/แจ้งเตือน → หลังการขาย
@@ -15,12 +16,6 @@ client = TestClient(app)
 
 TOMORROW = (date.today() + timedelta(days=1)).isoformat()
 PDF = b"%PDF-1.4\n% test document\n"
-
-
-def login(username: str, password: str) -> dict:
-    res = client.post("/api/login", json={"username": username, "password": password})
-    assert res.status_code == 200, res.text
-    return {"Authorization": "Bearer " + res.json()["access_token"]}
 
 
 def register(username: str) -> dict:
@@ -266,4 +261,4 @@ def test_member_endpoints_require_login(path):
 
 def test_health_reports_database():
     body = client.get("/api/health").json()
-    assert body == {"status": "ok", "database": "sqlite"}
+    assert body["status"] == "ok" and body["database"] in ("sqlite", "postgresql")

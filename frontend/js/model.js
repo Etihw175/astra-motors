@@ -164,6 +164,37 @@ function renderSpecs() {
     .join("");
 }
 
+/* ---------- รีวิวรุ่นนี้ ---------- */
+
+async function renderReviewSection() {
+  const zone = document.getElementById("reviews-zone");
+  zone.classList.remove("hidden");
+  const fresh = await API.car(car.id).catch(() => car);
+  document.getElementById("reviews-summary").innerHTML = stars(fresh.rating.avg, fresh.rating.count);
+
+  const reviews = await API.reviews(car.id, 20);
+  document.getElementById("reviews-list").innerHTML = reviews.length
+    ? reviews.map((r) => reviewCardHTML(r, { showCar: false })).join("")
+    : '<div class="card muted">ยังไม่มีรีวิวสำหรับรุ่นนี้ — ทดลองขับแล้วมาเล่าให้ฟังได้เลย</div>';
+
+  const formZone = document.getElementById("review-form-zone");
+  const user = Auth.isLoggedIn() && Auth.user();
+  if (!user) {
+    const next = encodeURIComponent(`${location.pathname}${location.search}#reviews-zone`);
+    formZone.innerHTML = `<h3>อยากรีวิวรุ่นนี้?</h3>
+      <p class="muted mt-1">เข้าสู่ระบบก่อน รีวิวของสมาชิกที่เคยทดลองขับหรือจองรุ่นนี้จะได้ป้าย "ผ่านการใช้งานจริง"</p>
+      <a class="btn btn-primary mt-2" href="/pages/login.html?next=${next}">เข้าสู่ระบบเพื่อรีวิว</a>`;
+    return;
+  }
+  if (reviews.some((r) => r.user_id === user.id)) {
+    formZone.innerHTML = `<h3>คุณรีวิวรุ่นนี้แล้ว</h3>
+      <p class="muted mt-1">ดูหรือลบรีวิวของคุณได้ที่หน้า <a href="/pages/after-sales.html">หลังการขาย</a></p>`;
+    return;
+  }
+  formZone.innerHTML = reviewFormHTML([car], car.id);
+  bindReviewForm(() => renderReviewSection());
+}
+
 async function initModel() {
   const id = qs("id");
   try {
@@ -208,6 +239,7 @@ async function initModel() {
 
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("detail").classList.remove("hidden");
+  renderReviewSection().catch(() => null);
 }
 
 // ถ้ามีข้อผิดพลาดที่ไม่คาดคิด ให้แสดงข้อความแทนการค้างที่ "กำลังโหลด"

@@ -30,7 +30,9 @@ const Auth = {
 };
 
 async function _api(path, options = {}) {
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  // ส่งไฟล์ (FormData) ต้องให้เบราว์เซอร์ตั้ง Content-Type + boundary เอง
+  const isForm = options.body instanceof FormData;
+  const headers = { ...(isForm ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) };
   const token = Auth.token();
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -53,15 +55,31 @@ async function _api(path, options = {}) {
   return data;
 }
 
+// ตัด key ที่ไม่มีค่าออก แล้วแปลงเป็น query string
+function _query(params = {}) {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") q.set(k, v);
+  });
+  const text = q.toString();
+  return text ? `?${text}` : "";
+}
+
 const API = {
-  cars: () => _api("/api/cars"),
+  /* ---------- แคตตาล็อก (รับรู้ / ค้นหา / รายละเอียด) ---------- */
+  cars: (filters) => _api(`/api/cars${_query(filters)}`),
+  carFacets: () => _api("/api/cars/facets"),
   car: (id) => _api(`/api/cars/${encodeURIComponent(id)}`),
+  promotions: () => _api("/api/promotions"),
   showrooms: () => _api("/api/showrooms"),
   slots: (id, date) =>
     _api(`/api/showrooms/${encodeURIComponent(id)}/slots?date=${encodeURIComponent(date)}`),
   financePlans: () => _api("/api/finance/plans"),
   createTestdrive: (body) =>
     _api("/api/testdrives", { method: "POST", body: JSON.stringify(body) }),
+  cancelTestdrive: (code) =>
+    _api(`/api/testdrives/${encodeURIComponent(code)}/cancel`, { method: "POST" }),
+  myBookings: () => _api("/api/me/bookings"),
   createReservation: (body) =>
     _api("/api/reservations", { method: "POST", body: JSON.stringify(body) }),
   reservation: (code) => _api(`/api/reservations/${encodeURIComponent(code)}`),
@@ -74,6 +92,34 @@ const API = {
     }),
   createLoan: (body) => _api("/api/loans", { method: "POST", body: JSON.stringify(body) }),
   loan: (id) => _api(`/api/loans/${encodeURIComponent(id)}`),
+  uploadDocument: (file, kind) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("kind", kind);
+    return _api("/api/documents", { method: "POST", body: form });
+  },
+
+  /* ---------- แจ้งเตือน (ติดตามสถานะ) ---------- */
+  notifications: (limit = 15) => _api(`/api/notifications?limit=${limit}`),
+  unreadCount: () => _api("/api/notifications/unread-count"),
+  readNotification: (id) => _api(`/api/notifications/${id}/read`, { method: "POST" }),
+  readAllNotifications: () => _api("/api/notifications/read-all", { method: "POST" }),
+
+  /* ---------- หลังการขาย: รีวิว / ศูนย์บริการ / คะแนนสะสม ---------- */
+  reviews: (carId, limit = 20) => _api(`/api/reviews${_query({ car_id: carId, limit })}`),
+  myReviews: () => _api("/api/reviews/mine"),
+  createReview: (body) => _api("/api/reviews", { method: "POST", body: JSON.stringify(body) }),
+  deleteReview: (id) => _api(`/api/reviews/${id}`, { method: "DELETE" }),
+  serviceTypes: () => _api("/api/service/types"),
+  serviceSlots: (showroomId, date) => _api(`/api/service/slots${_query({ showroom_id: showroomId, date })}`),
+  createService: (body) =>
+    _api("/api/service/appointments", { method: "POST", body: JSON.stringify(body) }),
+  myServices: () => _api("/api/service/appointments"),
+  cancelService: (code) =>
+    _api(`/api/service/appointments/${encodeURIComponent(code)}/cancel`, { method: "POST" }),
+  loyalty: () => _api("/api/loyalty"),
+  redeem: (rewardId) =>
+    _api("/api/loyalty/redeem", { method: "POST", body: JSON.stringify({ reward_id: rewardId }) }),
 
   /* ---------- จำลองการใช้งานบนถนนไทย ---------- */
   simulationConditions: () => _api("/api/simulation/conditions"),

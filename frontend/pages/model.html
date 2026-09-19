@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=9">
+  <link rel="stylesheet" href="/css/style.css?v=10">
 </head>
 <body>
   <main class="section">
@@ -56,6 +56,19 @@
           </div>
         </div>
       </div>
+
+      <!-- รีวิวจากสมาชิก (journey ขั้นตอน 3 ข้อมูลครบก่อนตัดสินใจ + ขั้นตอน 7 เขียนรีวิว) -->
+      <section class="mt-4 hidden" id="reviews-zone" aria-labelledby="reviews-title">
+        <div class="section-head" style="margin-bottom:var(--space-2)">
+          <p class="eyebrow">Reviews</p>
+          <h2 id="reviews-title">รีวิวรุ่นนี้</h2>
+          <p id="reviews-summary"></p>
+        </div>
+        <div class="grid grid-2" style="align-items:start">
+          <div id="reviews-list"></div>
+          <div class="card" id="review-form-zone"></div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -67,9 +80,9 @@
 
   <!-- ตัวแสดงโมเดล 3D (หมุนดู 360°) — ใช้เมื่อมีไฟล์ .glb ใน /assets/models/ -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-  <script src="/js/api.js?v=9"></script>
-  <script src="/js/ui.js?v=9"></script>
-  <script src="/js/fx.js?v=9"></script>
-  <script src="/js/model.js?v=9"></script>
+  <script src="/js/api.js?v=10"></script>
+  <script src="/js/ui.js?v=10"></script>
+  <script src="/js/fx.js?v=10"></script>
+  <script src="/js/model.js?v=10"></script>
 </body>
 </html>

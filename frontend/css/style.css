@@ -904,3 +904,228 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.022); }
   .score-ring .dial { --size: 104px; }
   .score-ring .dial b { font-size: 27px; }
 }
+
+/* =========================================================
+   Integration รอบ 3: แจ้งเตือน / ค้นหา-กรอง / รีวิว / หลังการขาย
+   ========================================================= */
+
+/* ---------- กระดิ่งแจ้งเตือน ---------- */
+.bell-wrap { position: relative; }
+.bell {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+.bell:hover, .bell[aria-expanded="true"] { border-color: var(--accent); color: var(--accent-strong); }
+.bell-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #fff;
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.bell-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: min(360px, calc(100vw - 32px));
+  max-height: 440px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 60;
+}
+.bell-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.bell-empty { padding: 14px; }
+.bell-list { list-style: none; }
+.bell-list li + li { border-top: 1px solid var(--line); }
+.bell-list a { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; color: var(--text); }
+.bell-list a:hover { background: var(--surface-2); text-decoration: none; }
+.bell-list b { font-size: 14px; font-weight: 600; }
+.bell-list span { font-size: 13px; color: var(--text-dim); }
+.bell-list small { font-size: 12px; color: var(--text-dim); opacity: 0.8; }
+.bell-list li.unread a { box-shadow: inset 3px 0 0 var(--accent); }
+.bell-list li.unread b::before { content: "● "; color: var(--accent); font-size: 10px; vertical-align: middle; }
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.link-btn:disabled { color: var(--text-dim); cursor: default; }
+
+/* ---------- แถบค้นหา/กรองรถ (หน้าแรก) ---------- */
+.filter-bar {
+  display: grid;
+  grid-template-columns: 2fr repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.filter-bar .field { margin-bottom: 0; }
+.filter-bar label { font-size: 13px; color: var(--text-dim); }
+.filter-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: -8px 0 var(--space-2); }
+
+/* ---------- ดาวรีวิว ---------- */
+.stars { display: inline-flex; align-items: baseline; gap: 4px; font-size: 14px; }
+.stars .on { color: var(--warn); letter-spacing: 1px; }
+.stars .off { color: var(--line); letter-spacing: 1px; margin-left: -4px; }
+.stars b { font-size: 14px; color: var(--text); }
+.stars small { color: var(--text-dim); font-size: 12px; }
+.car-card .stars { margin-bottom: 6px; }
+
+/* ---------- โปรโมชั่น + รีวิวหน้าแรก ---------- */
+.promo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-2); }
+.promo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--surface);
+  color: var(--text);
+}
+.promo-card:hover { text-decoration: none; border-color: var(--accent); }
+.promo-card .car { font-size: 13px; color: var(--text-dim); }
+.promo-card b { font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1.35; }
+.promo-card .left { font-size: 13px; color: var(--accent-strong); font-family: var(--font-data); }
+
+.review-card { display: flex; flex-direction: column; gap: 8px; }
+.review-card .head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+.review-card h4 { font-size: 16px; }
+.review-card p { color: var(--text-dim); font-size: 14.5px; }
+.review-card .by { font-size: 13px; color: var(--text-dim); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ตัวเลือกดาวในฟอร์มรีวิว */
+.star-input { display: flex; gap: 4px; }
+.star-input button {
+  background: none;
+  border: none;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--line);
+  cursor: pointer;
+  padding: 2px;
+  min-width: 40px;
+  min-height: 44px;
+}
+.star-input button.on { color: var(--warn); }
+textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 16px;
+  resize: vertical;
+}
+textarea:focus { border-color: var(--accent); outline: none; }
+
+/* ---------- หลังการขาย: บัตรสมาชิก + รายการ ---------- */
+.member-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--accent-soft), transparent 60%),
+    linear-gradient(160deg, var(--surface-2), var(--surface));
+}
+.member-card .tier { font-family: var(--font-display); letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-strong); }
+.member-card .points { font-family: var(--font-data); font-size: clamp(36px, 5vw, 52px); font-weight: 700; line-height: 1.1; }
+.member-card .points small { font-size: 16px; color: var(--text-dim); font-weight: 500; margin-left: 6px; }
+.progress { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 12px; }
+.progress > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+.list-rows { display: flex; flex-direction: column; }
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.list-row:last-child { border-bottom: none; }
+.list-row .main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.list-row .main b { font-weight: 600; }
+.list-row .main span { font-size: 13.5px; color: var(--text-dim); }
+.pts-plus { color: var(--ok); font-family: var(--font-data); font-weight: 600; }
+.pts-minus { color: var(--bad); font-family: var(--font-data); font-weight: 600; }
+
+.reward-row .btn { min-height: 38px; padding: 0 16px; font-size: 14px; }
+
+/* การ์ดใบจองในรายการ "การจองของฉัน" ให้กดเลือกได้ */
+.booking-pick { cursor: pointer; }
+.booking-pick.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+@media (max-width: 960px) {
+  .filter-bar { grid-template-columns: 1fr 1fr; }
+  .filter-bar .field:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .auth-zone .bell { width: 38px; height: 38px; }
+}
+
+/* แถบ journey 7 ขั้นตอน (หน้าแรก) — การ์ดกดไปหน้านั้นได้ */
+.journey-strip.seven { grid-template-columns: repeat(7, 1fr); gap: 12px; }
+.journey-strip.seven .jstep { padding: var(--space-2); color: var(--text); transition: border-color 0.2s ease, transform 0.2s ease; }
+.journey-strip.seven .jstep:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); }
+.journey-strip.seven h3 { font-size: 17px; margin: 4px 0; }
+.journey-strip.seven p { font-size: 13px; }
+@media (max-width: 1100px) { .journey-strip.seven { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 600px) { .journey-strip.seven { grid-template-columns: 1fr 1fr; } }
+
+/* header: เมนูเพิ่มเป็น 6 รายการ + กระดิ่ง — ซ่อน scrollbar ของเมนู และกันปุ่มมุมขวาถูกบีบจนตัดบรรทัด */
+.site-nav { scrollbar-width: none; }
+.site-nav::-webkit-scrollbar { display: none; }
+.auth-zone { flex: none; }
+.auth-zone .btn { white-space: nowrap; }
+@media (max-width: 1240px) {
+  .site-header .bar { gap: var(--space-2); }
+  .site-nav a { padding: 0 10px; font-size: 14px; }
+  .auth-zone .user-pill { padding-right: 5px; }
+  .auth-zone .user-pill .who { display: none; }   /* เหลือแค่วงกลมตัวอักษรแรก ประหยัดที่ให้เมนู */
+}

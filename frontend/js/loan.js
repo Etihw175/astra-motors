@@ -1,6 +1,7 @@
-// ยื่นขอสินเชื่อ (journey ขั้นตอน 7): เลือกแผน → กรอกข้อมูล/แนบเอกสาร → ส่งเรื่อง
+// ยื่นขอสินเชื่อ (journey ขั้นตอน 5): เลือกแผน → กรอกข้อมูล/อัปโหลดเอกสาร → ส่งเรื่อง
 "use strict";
 
+requireLogin("/pages/loan.html");
 renderHeader("home");
 renderFooter();
 
@@ -81,16 +82,25 @@ async function submit(e) {
   if (!document.getElementById("ln-consent").checked)
     return toast("กรุณายินยอมการใช้ข้อมูล (PDPA) ก่อนส่งคำขอ", "error");
 
-  // เก็บเฉพาะ "ชื่อไฟล์" เอกสารที่เลือก (การอัปโหลดเป็นการจำลอง)
-  const documents = ["doc-id", "doc-income"]
-    .map((id) => document.getElementById(id).files[0])
-    .filter(Boolean)
-    .map((f) => f.name);
+  const files = [
+    ["doc-id", "id_card"],
+    ["doc-income", "income"],
+  ]
+    .map(([id, kind]) => ({ file: document.getElementById(id).files[0], kind }))
+    .filter((d) => d.file);
+  const tooBig = files.find((d) => d.file.size > 5 * 1024 * 1024);
+  if (tooBig) return toast(`ไฟล์ ${tooBig.file.name} ใหญ่เกิน 5 MB`, "error");
 
   const btn = document.getElementById("ln-submit");
   btn.disabled = true;
-  btn.textContent = "กำลังส่งคำขอ…";
   try {
+    // อัปโหลดเอกสารทีละไฟล์ก่อน แล้วแนบ id ของเอกสารไปกับคำขอสินเชื่อ
+    const documentIds = [];
+    for (const [i, d] of files.entries()) {
+      btn.textContent = `กำลังอัปโหลดเอกสาร ${i + 1}/${files.length}…`;
+      documentIds.push((await API.uploadDocument(d.file, d.kind)).id);
+    }
+    btn.textContent = "กำลังส่งคำขอ…";
     const record = await API.createLoan({
       reservation_code: reservation.code,
       plan_id: document.getElementById("ln-plan").value,
@@ -100,12 +110,12 @@ async function submit(e) {
       phone,
       occupation: document.getElementById("ln-occupation").value,
       monthly_income: income,
-      documents,
+      document_ids: documentIds,
       consent_pdpa: true,
     });
     Store.save("loan_id", record.id);
     toast("ส่งคำขอสินเชื่อแล้ว กำลังพาไปหน้าติดตามผล…", "ok");
-    setTimeout(() => (location.href = "/pages/status.html"), 900);
+    setTimeout(() => (location.href = `/pages/status.html?code=${record.reservation_code}`), 900);
   } catch (err) {
     toast(err.message, "error");
     btn.disabled = false;
@@ -135,11 +145,29 @@ async function initLoan() {
   document.getElementById("ln-code").addEventListener("change", loadReservation);
   document.getElementById("ln-form").addEventListener("submit", submit);
 
-  // เติมรหัสใบจองล่าสุดของผู้ใช้ให้อัตโนมัติ
-  const savedCode = Store.load("reservation_code");
-  if (savedCode) {
-    document.getElementById("ln-code").value = savedCode;
-    loadReservation();
+  prefillFromUser({ "ln-name": "full_name", "ln-phone": "phone" });
+
+  // ใบจองที่ยังยื่นสินเชื่อได้ = ยังไม่ยกเลิก/ไม่ได้นัดรับรถ และสินเชื่อเดิม (ถ้ามี) ไม่ผ่าน
+  const codeInput = document.getElementById("ln-code");
+  try {
+    const mine = await API.myBookings();
+    const eligible = mine.reservations.filter(
+      (r) => r.status === "reserved" && (!r.loan || r.loan.status === "rejected")
+    );
+    document.getElementById("my-codes").innerHTML = eligible
+      .map((r) => `<option value="${r.code}">${esc(r.car.name)} · ${baht(r.total_price)}</option>`)
+      .join("");
+    const wanted = qs("code") || Store.load("reservation_code");
+    const pick = eligible.find((r) => r.code === wanted) || eligible[0];
+    if (pick) {
+      codeInput.value = pick.code;
+      loadReservation();
+    } else if (!mine.reservations.length) {
+      document.getElementById("rsv-summary").innerHTML =
+        'ยังไม่มีใบจองในบัญชีนี้ — <a href="/">เลือกรุ่นรถแล้วจองออนไลน์</a> ก่อนยื่นสินเชื่อ';
+    }
+  } catch {
+    /* โหลดรายการไม่ได้ก็ยังพิมพ์รหัสเองได้ */
   }
 }
 

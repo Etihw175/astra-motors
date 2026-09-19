@@ -3,13 +3,14 @@
 
 /* ---------- Header / Footer ---------- */
 
+// โลโก้ ASTRA/MOTORS พากลับหน้าแรกอยู่แล้ว จึงไม่ต้องมีเมนู "หน้าแรก" ซ้ำ
 const NAV_ITEMS = [
-  { key: "home", label: "หน้าแรก", href: "/" },
-  { key: "compare", label: "เปรียบเทียบรุ่น", href: "/pages/compare.html" },
-  { key: "finance", label: "คำนวณไฟแนนซ์", href: "/pages/finance.html" },
+  { key: "compare", label: "เปรียบเทียบ", href: "/pages/compare.html" },
+  { key: "finance", label: "ไฟแนนซ์", href: "/pages/finance.html" },
   { key: "thai-road", label: "ถนนไทย", href: "/pages/thai-road.html" },
   { key: "testdrive", label: "จองทดลองขับ", href: "/pages/test-drive.html" },
   { key: "status", label: "การจองของฉัน", href: "/pages/status.html" },
+  { key: "after-sales", label: "หลังการขาย", href: "/pages/after-sales.html" },
 ];
 
 function renderHeader(activeKey) {
@@ -44,17 +45,25 @@ function renderAuthZone(activeKey) {
     return;
   }
 
-  const initial = (user.full_name || user.username || "?").trim().charAt(0);
+  const initial = esc((user.full_name || user.username || "?").trim().charAt(0));
   zone.innerHTML = `
+    <div class="bell-wrap">
+      <button class="bell" id="bell" type="button" aria-haspopup="true" aria-expanded="false"
+              aria-label="แจ้งเตือน">
+        ${ICONS.bell}<span class="bell-count hidden" id="bell-count">0</span>
+      </button>
+      <div class="bell-panel hidden" id="bell-panel" role="dialog" aria-label="แจ้งเตือนของฉัน"></div>
+    </div>
     <a class="user-pill ${activeKey === "profile" ? "active" : ""}" href="/pages/profile.html"
        title="โปรไฟล์ของฉัน">
       <span class="avatar" aria-hidden="true">${initial}</span>
       <span class="who">
-        <b>${user.full_name || user.username}</b>
+        <b>${esc(user.full_name || user.username)}</b>
         <small>${user.role === "admin" ? "ผู้ดูแลระบบ" : "สมาชิก"}</small>
       </span>
     </a>
     <button class="btn btn-ghost btn-sm" id="btn-logout" type="button">ออกจากระบบ</button>`;
+  initBell();
 
   document.getElementById("btn-logout").addEventListener("click", async () => {
     try {
@@ -66,6 +75,101 @@ function renderAuthZone(activeKey) {
     toast("ออกจากระบบเรียบร้อย", "ok");
     setTimeout(() => (location.href = "/"), 600);
   });
+}
+
+/* ---------- กระดิ่งแจ้งเตือน (journey ขั้นตอน 6) ----------
+   poll จำนวนที่ยังไม่อ่านทุก 15 วินาที — มีเรื่องใหม่ (เช่น ผลสินเชื่อออก) จะเด้ง toast ทันที */
+
+const BELL_POLL_MS = 15000;
+let _bellUnread = null;
+
+function _timeAgo(iso) {
+  const sec = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (sec < 60) return "เมื่อสักครู่";
+  if (sec < 3600) return `${Math.floor(sec / 60)} นาทีที่แล้ว`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)} ชั่วโมงที่แล้ว`;
+  return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+}
+
+function _setBellCount(n) {
+  const badge = document.getElementById("bell-count");
+  if (!badge) return;
+  badge.textContent = n > 9 ? "9+" : String(n);
+  badge.classList.toggle("hidden", !n);
+}
+
+async function _renderBellPanel() {
+  const panel = document.getElementById("bell-panel");
+  panel.innerHTML = '<p class="muted small bell-empty">กำลังโหลด…</p>';
+  try {
+    const data = await API.notifications(12);
+    _bellUnread = data.unread;
+    _setBellCount(data.unread);
+    const list = data.items
+      .map(
+        (n) => `<li class="${n.is_read ? "" : "unread"}">
+          <a href="${esc(n.link || "#")}" data-id="${n.id}">
+            <b>${esc(n.title)}</b><span>${esc(n.message)}</span><small>${_timeAgo(n.created_at)}</small>
+          </a></li>`
+      )
+      .join("");
+    panel.innerHTML = `
+      <div class="bell-head">
+        <b>แจ้งเตือน</b>
+        <button type="button" class="link-btn" id="bell-read-all" ${data.unread ? "" : "disabled"}>อ่านทั้งหมด</button>
+      </div>
+      ${
+        data.items.length
+          ? `<ul class="bell-list">${list}</ul>`
+          : '<p class="muted small bell-empty">ยังไม่มีแจ้งเตือน — ลองจองทดลองขับหรือจองรถดูสิ</p>'
+      }`;
+    document.getElementById("bell-read-all").addEventListener("click", async () => {
+      await API.readAllNotifications().catch(() => null);
+      _renderBellPanel();
+    });
+    panel.querySelectorAll("a[data-id]").forEach((a) => {
+      a.addEventListener("click", () => API.readNotification(a.dataset.id).catch(() => null));
+    });
+  } catch (err) {
+    panel.innerHTML = `<p class="muted small bell-empty">${esc(err.message)}</p>`;
+  }
+}
+
+async function _pollBell() {
+  if (!Auth.isLoggedIn()) return;
+  try {
+    const { unread } = await API.unreadCount();
+    if (_bellUnread !== null && unread > _bellUnread) {
+      const latest = await API.notifications(1);
+      if (latest.items[0]) toast(`${latest.items[0].title} — ${latest.items[0].message}`, "ok");
+    }
+    _bellUnread = unread;
+    _setBellCount(unread);
+  } catch {
+    /* ออฟไลน์ชั่วคราว — รอบหน้าลองใหม่ */
+  }
+}
+
+function initBell() {
+  const bell = document.getElementById("bell");
+  const panel = document.getElementById("bell-panel");
+  bell.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = !panel.classList.toggle("hidden");
+    bell.setAttribute("aria-expanded", String(open));
+    if (open) _renderBellPanel();
+  });
+  document.addEventListener("click", (e) => {
+    if (!panel.contains(e.target)) {
+      panel.classList.add("hidden");
+      bell.setAttribute("aria-expanded", "false");
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") panel.classList.add("hidden");
+  });
+  _pollBell();
+  setInterval(_pollBell, BELL_POLL_MS);
 }
 
 /* ---------- บังคับให้ล็อกอินก่อนเข้าหน้าที่ต้องใช้สิทธิ์ ---------- */
@@ -222,6 +326,8 @@ function initCarVisuals(root = document) {
 /* ---------- ไอคอน SVG (ไม่ใช้ emoji ตามแนวทาง UI) ---------- */
 
 const ICONS = {
+  bell:
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
   check:
     '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#58b98b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
   checkSmall:
@@ -231,6 +337,36 @@ const ICONS = {
 };
 
 /* ---------- ตัวช่วยจัดรูปแบบ ---------- */
+
+// ข้อความที่ผู้ใช้พิมพ์เอง (รีวิว ชื่อ หมายเหตุ) ต้อง escape ก่อนใส่ innerHTML เสมอ กัน XSS
+function esc(value) {
+  const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return String(value ?? "").replace(/[&<>"']/g, (c) => map[c]);
+}
+
+// ดาวคะแนนรีวิว เช่น ★★★★☆ 4.2 (12)
+function stars(avg, count) {
+  if (!count) return '<span class="stars muted">ยังไม่มีรีวิว</span>';
+  const full = Math.round(avg);
+  return `<span class="stars" aria-label="คะแนน ${avg} จาก 5 (${count} รีวิว)">
+    <span class="on">${"★".repeat(full)}</span><span class="off">${"★".repeat(5 - full)}</span>
+    <b class="num">${Number(avg).toFixed(1)}</b><small>(${count})</small></span>`;
+}
+
+// ดาวของรีวิวรายการเดียว (ไม่มีตัวเลขเฉลี่ย)
+function ratingStars(rating) {
+  return `<span class="stars" aria-label="${rating} ดาว"><span class="on">${"★".repeat(rating)}</span><span class="off">${"★".repeat(5 - rating)}</span></span>`;
+}
+
+// เติมชื่อ/เบอร์/อีเมลจากบัญชีที่ล็อกอินอยู่ลงฟอร์ม (ไม่ทับค่าที่ผู้ใช้พิมพ์ไว้แล้ว)
+function prefillFromUser(map) {
+  const user = typeof Auth !== "undefined" && Auth.user();
+  if (!user) return;
+  Object.entries(map).forEach(([inputId, key]) => {
+    const input = document.getElementById(inputId);
+    if (input && !input.value && user[key]) input.value = user[key];
+  });
+}
 
 function baht(n) {
   return "฿" + Number(n).toLocaleString("th-TH");
@@ -292,4 +428,97 @@ const Store = {
 
 function qs(name) {
   return new URLSearchParams(location.search).get(name);
+}
+
+/* ---------- รีวิว: การ์ด + ฟอร์ม (ใช้ร่วมกันหน้าแรก / รายละเอียดรุ่น / หลังการขาย) ---------- */
+
+function reviewCardHTML(r, { showCar = true, onDelete = false } = {}) {
+  return `
+    <article class="card review-card">
+      <div class="head">
+        ${ratingStars(r.rating)}
+        ${r.verified ? '<span class="badge badge-ok">ผ่านการใช้งานจริง</span>' : ""}
+      </div>
+      <h4>${esc(r.title)}</h4>
+      <p>${esc(r.comment)}</p>
+      <p class="by">
+        <span>${esc(r.author)}</span>
+        ${showCar ? `·<a href="/pages/model.html?id=${r.car.id}">${esc(r.car.name)}</a>` : ""}
+        ·<span>${new Date(r.created_at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}</span>
+        ${onDelete ? `<button type="button" class="link-btn" data-del-review="${r.id}">ลบรีวิว</button>` : ""}
+      </p>
+    </article>`;
+}
+
+function reviewFormHTML(cars, selectedId) {
+  const carField =
+    cars.length > 1
+      ? `<div class="field"><label for="rv-car">รุ่นที่ต้องการรีวิว</label>
+           <select id="rv-car">${cars
+             .map((c) => `<option value="${c.id}" ${c.id === selectedId ? "selected" : ""}>${esc(c.name)}</option>`)
+             .join("")}</select></div>`
+      : `<input type="hidden" id="rv-car" value="${cars[0].id}">`;
+  return `
+    <form id="rv-form" novalidate>
+      <h3 class="mb-2">เขียนรีวิว <span class="badge badge-accent">+200 คะแนน</span></h3>
+      ${carField}
+      <div class="field">
+        <label id="rv-stars-label">ให้คะแนน</label>
+        <div class="star-input" id="rv-stars" role="radiogroup" aria-labelledby="rv-stars-label">
+          ${[1, 2, 3, 4, 5]
+            .map((n) => `<button type="button" data-n="${n}" role="radio" aria-checked="false" aria-label="${n} ดาว">★</button>`)
+            .join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label for="rv-title">หัวข้อรีวิว</label>
+        <input type="text" id="rv-title" maxlength="80" placeholder="เช่น แรงแต่ขับในเมืองได้สบาย">
+        <span class="error">หัวข้ออย่างน้อย 2 ตัวอักษร</span>
+      </div>
+      <div class="field">
+        <label for="rv-comment">รายละเอียด</label>
+        <textarea id="rv-comment" maxlength="1000"
+          placeholder="เล่าประสบการณ์ทดลองขับหรือการใช้งานจริง ช่วยให้คนที่กำลังตัดสินใจ"></textarea>
+        <span class="error">รายละเอียดอย่างน้อย 10 ตัวอักษร</span>
+      </div>
+      <button class="btn btn-primary btn-block" id="rv-submit" type="submit">ส่งรีวิว</button>
+    </form>`;
+}
+
+function bindReviewForm(onDone) {
+  let rating = 0;
+  const starZone = document.getElementById("rv-stars");
+  const buttons = starZone.querySelectorAll("button");
+  const paint = () =>
+    buttons.forEach((b) => {
+      const n = Number(b.dataset.n);
+      b.classList.toggle("on", n <= rating);
+      b.setAttribute("aria-checked", String(n === rating));
+    });
+  buttons.forEach((b) => b.addEventListener("click", () => { rating = Number(b.dataset.n); paint(); }));
+
+  document.getElementById("rv-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = document.getElementById("rv-title").value.trim();
+    const comment = document.getElementById("rv-comment").value.trim();
+    document.getElementById("rv-title").closest(".field").classList.toggle("invalid", title.length < 2);
+    document.getElementById("rv-comment").closest(".field").classList.toggle("invalid", comment.length < 10);
+    if (!rating) return toast("กรุณาให้คะแนนดาวก่อนส่งรีวิว", "error");
+    if (title.length < 2 || comment.length < 10) return;
+
+    const btn = document.getElementById("rv-submit");
+    btn.disabled = true;
+    btn.textContent = "กำลังส่ง…";
+    try {
+      const review = await API.createReview({
+        car_id: document.getElementById("rv-car").value, rating, title, comment,
+      });
+      toast("ขอบคุณสำหรับรีวิว — ได้รับ 200 คะแนน", "ok");
+      onDone(review);
+    } catch (err) {
+      toast(err.message, "error");
+      btn.disabled = false;
+      btn.textContent = "ส่งรีวิว";
+    }
+  });
 }

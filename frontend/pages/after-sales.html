@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บริการหลังการขาย — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=10">
+</head>
+<body>
+  <main class="section">
+    <div class="container" style="max-width:1000px">
+      <div class="section-head">
+        <p class="eyebrow">Journey 7/7 — หลังการใช้งาน</p>
+        <h2>บริการหลังการขาย</h2>
+        <p>สะสมคะแนนจากทุกขั้นตอน นัดเข้าศูนย์บริการได้เองโดยไม่ต้องโทร และรีวิวรถที่คุณได้ลองจริง</p>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="เมนูหลังการขาย">
+        <button type="button" class="active" data-tab="points" role="tab" aria-selected="true">คะแนนสะสม</button>
+        <button type="button" data-tab="service" role="tab" aria-selected="false">นัดเข้าศูนย์บริการ</button>
+        <button type="button" data-tab="reviews" role="tab" aria-selected="false">รีวิวของฉัน</button>
+      </div>
+
+      <!-- ===== คะแนนสะสม ===== -->
+      <section data-panel="points" role="tabpanel">
+        <div class="grid grid-2" style="align-items:start">
+          <div>
+            <div class="member-card" id="member-card" aria-live="polite">
+              <p class="muted small">กำลังโหลดคะแนน…</p>
+            </div>
+            <div class="card mt-2">
+              <h3>วิธีได้คะแนน</h3>
+              <div class="list-rows mt-1" id="earn-rules"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h3>แลกของรางวัล</h3>
+              <div class="list-rows mt-1" id="rewards"></div>
+            </div>
+            <div class="card">
+              <h3>ประวัติคะแนน</h3>
+              <div class="list-rows mt-1" id="history"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== นัดเข้าศูนย์บริการ ===== -->
+      <section data-panel="service" role="tabpanel" class="hidden">
+        <div class="grid grid-2" style="align-items:start">
+          <form class="card" id="sv-form" novalidate>
+            <h3 class="mb-2">นัดหมายใหม่ <span class="badge badge-accent">+100 คะแนน</span></h3>
+            <div class="field">
+              <label for="sv-car">รถของคุณ</label>
+              <select id="sv-car"></select>
+              <p class="hint" id="sv-car-hint"></p>
+            </div>
+            <div class="field">
+              <label for="sv-type">ประเภทบริการ</label>
+              <select id="sv-type"></select>
+            </div>
+            <div class="field">
+              <label for="sv-center">ศูนย์บริการ</label>
+              <select id="sv-center"></select>
+            </div>
+            <div class="grid grid-2">
+              <div class="field">
+                <label for="sv-date">วันที่</label>
+                <input type="date" id="sv-date">
+              </div>
+              <div class="field">
+                <label for="sv-mileage">เลขไมล์ปัจจุบัน (กม.)</label>
+                <input type="number" id="sv-mileage" min="0" step="100" inputmode="numeric" placeholder="เช่น 15000">
+                <span class="error">กรุณากรอกเลขไมล์</span>
+              </div>
+            </div>
+            <div class="field">
+              <label id="sv-slot-label">ช่วงเวลา</label>
+              <div class="chip-row" id="sv-slots" role="radiogroup" aria-labelledby="sv-slot-label">
+                <p class="muted small">เลือกศูนย์บริการและวันที่ก่อน</p>
+              </div>
+            </div>
+            <div class="field">
+              <label for="sv-note">อาการ/รายละเอียดเพิ่มเติม (ถ้ามี)</label>
+              <textarea id="sv-note" maxlength="500" placeholder="เช่น มีเสียงดังตอนเบรก"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="sv-submit">ยืนยันนัดหมาย</button>
+          </form>
+
+          <div>
+            <h3 class="mb-2">นัดหมายของฉัน</h3>
+            <div id="sv-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== รีวิว ===== -->
+      <section data-panel="reviews" role="tabpanel" class="hidden">
+        <div class="grid grid-2" style="align-items:start">
+          <div class="card" id="rv-zone"></div>
+          <div>
+            <h3 class="mb-2">รีวิวที่ฉันเขียน</h3>
+            <div id="my-reviews"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/js/api.js?v=10"></script>
+  <script src="/js/ui.js?v=10"></script>
+  <script src="/js/fx.js?v=10"></script>
+  <script src="/js/after-sales.js?v=10"></script>
+</body>
+</html>
