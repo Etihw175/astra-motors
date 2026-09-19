@@ -6,6 +6,10 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
+
+# ฐานข้อมูล SQLite ตอนรันในเครื่องโดยไม่ใช้ Docker (สร้างใหม่อัตโนมัติ)
+*.db
 
 # OS / Editor
 .DS_Store

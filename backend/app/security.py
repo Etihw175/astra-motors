@@ -1,4 +1,4 @@
-# ระบบยืนยันตัวตน: แฮชรหัสผ่าน + จัดการ session token (Bearer)
+# ระบบยืนยันตัวตน: แฮชรหัสผ่าน + จัดการ session token (Bearer) — เก็บในฐานข้อมูล
 # หมายเหตุการสอน: ใช้ PBKDF2-HMAC-SHA256 จาก standard library ของ Python
 # จึงไม่ต้องติดตั้ง package เพิ่ม และ "ห้ามเก็บรหัสผ่านเป็น plain text" เด็ดขาด
 import hashlib
@@ -6,19 +6,18 @@ import hmac
 import re
 import secrets
 from datetime import datetime, timedelta
+from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlmodel import Session, delete, func, select
 
-from .data import SEED_USERS, USER_SEQ, USERS
+from .database import get_session
+from .models import AuthSession, User, now
 
 PBKDF2_ITERATIONS = 120_000
 TOKEN_TTL_HOURS = 8            # token หมดอายุใน 8 ชั่วโมง
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_.]{4,20}$")
-
-# session store แบบ in-memory: token -> {"user_id": int, "expires_at": datetime}
-# (สัปดาห์ถัดไปย้ายไปเก็บใน PostgreSQL หรือเปลี่ยนเป็น JWT ได้ทันที เพราะแยกไฟล์ไว้แล้ว)
-SESSIONS: dict[str, dict] = {}
 
 # auto_error=False เพื่อให้เราตอบข้อความภาษาไทยเองแทน error มาตรฐานของ FastAPI
 bearer_scheme = HTTPBearer(auto_error=False, description="ใส่ token ที่ได้จาก POST /api/login")
@@ -62,10 +61,15 @@ def password_problem(password: str) -> str | None:
 
 # ---------- token / session ----------
 
-def create_session(user_id: int) -> dict:
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_session(db: Session, user_id: int) -> dict:
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.now() + timedelta(hours=TOKEN_TTL_HOURS)
-    SESSIONS[token] = {"user_id": user_id, "expires_at": expires_at}
+    expires_at = now() + timedelta(hours=TOKEN_TTL_HOURS)
+    db.add(AuthSession(token_hash=_token_hash(token), user_id=user_id, expires_at=expires_at))
+    db.commit()
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -73,16 +77,18 @@ def create_session(user_id: int) -> dict:
     }
 
 
-def destroy_session(token: str) -> bool:
-    return SESSIONS.pop(token, None) is not None
+def destroy_session(db: Session, token: str) -> bool:
+    session = db.get(AuthSession, _token_hash(token))
+    if session is None:
+        return False
+    db.delete(session)
+    db.commit()
+    return True
 
 
-def destroy_sessions_of(user_id: int) -> int:
-    """เตะ session ทั้งหมดของผู้ใช้คนนี้ (ใช้ตอนเปลี่ยนรหัสผ่าน/ลบบัญชี)"""
-    tokens = [t for t, s in SESSIONS.items() if s["user_id"] == user_id]
-    for t in tokens:
-        SESSIONS.pop(t, None)
-    return len(tokens)
+def destroy_sessions_of(db: Session, user_id: int) -> None:
+    """เตะ session ทั้งหมดของผู้ใช้คนนี้ (ใช้ตอนเปลี่ยนรหัสผ่าน/ระงับ/ลบบัญชี) — ผู้เรียกเป็นคน commit"""
+    db.exec(delete(AuthSession).where(AuthSession.user_id == user_id))
 
 
 def _unauthorized(detail: str) -> HTTPException:
@@ -93,94 +99,109 @@ def _unauthorized(detail: str) -> HTTPException:
     )
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> dict:
-    """Dependency: ทุก endpoint ที่ต้องล็อกอินให้ใส่ตัวนี้ แล้วจะได้ dict ของ user กลับมา"""
-    if credentials is None or not credentials.credentials:
-        raise _unauthorized("กรุณาเข้าสู่ระบบก่อนใช้งาน")
-
-    session = SESSIONS.get(credentials.credentials)
+def _resolve_user(db: Session, token: str) -> User:
+    session = db.get(AuthSession, _token_hash(token))
     if session is None:
         raise _unauthorized("token ไม่ถูกต้องหรือถูกยกเลิกแล้ว กรุณาเข้าสู่ระบบใหม่")
-    if session["expires_at"] < datetime.now():
-        SESSIONS.pop(credentials.credentials, None)
+    if session.expires_at < datetime.now():
+        db.delete(session)
+        db.commit()
         raise _unauthorized("เซสชันหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่")
 
-    user = USERS.get(session["user_id"])
+    user = db.get(User, session.user_id)
     if user is None:
-        SESSIONS.pop(credentials.credentials, None)
         raise _unauthorized("ไม่พบบัญชีผู้ใช้นี้แล้ว")
-    if not user["is_active"]:
+    if not user.is_active:
         raise HTTPException(status_code=403, detail="บัญชีนี้ถูกระงับการใช้งาน")
-
-    # แนบ token ไว้ให้ /logout เอาไปลบ session ได้โดยไม่ต้องอ่าน header ซ้ำ
-    return {**user, "_token": credentials.credentials}
+    return user
 
 
-def require_admin(user: dict = Depends(get_current_user)) -> dict:
+def current_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> str:
+    """Dependency: คืน token ดิบจาก header (ใช้ตอน logout เพื่อลบ session นั้น)"""
+    if credentials is None or not credentials.credentials:
+        raise _unauthorized("กรุณาเข้าสู่ระบบก่อนใช้งาน")
+    return credentials.credentials
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_session),
+) -> User:
+    """Dependency: ทุก endpoint ที่ต้องล็อกอินให้ใส่ตัวนี้ แล้วจะได้ User กลับมา"""
+    if credentials is None or not credentials.credentials:
+        raise _unauthorized("กรุณาเข้าสู่ระบบก่อนใช้งาน")
+    return _resolve_user(db, credentials.credentials)
+
+
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_session),
+) -> Optional[User]:
+    """Dependency: endpoint ที่ใช้ได้ทั้ง guest และสมาชิก (เช่น จองทดลองขับ)
+
+    ถ้าล็อกอินอยู่จะผูกข้อมูลเข้าบัญชี — token เสีย/หมดอายุให้ถือเป็น guest แทนการ error
+    """
+    if credentials is None or not credentials.credentials:
+        return None
+    try:
+        return _resolve_user(db, credentials.credentials)
+    except HTTPException:
+        return None
+
+
+def require_admin(user: User = Depends(get_current_user)) -> User:
     """Dependency: เฉพาะผู้ดูแลระบบ (ใช้กับ endpoint ที่ดู/ลบข้อมูลคนอื่น)"""
-    if user["role"] != "admin":
+    if user.role != "admin":
         raise HTTPException(status_code=403, detail="ต้องเป็นผู้ดูแลระบบเท่านั้น")
     return user
 
 
-def can_touch(actor: dict, user_id: int) -> bool:
-    """เจ้าของบัญชีเอง หรือผู้ดูแลระบบ เท่านั้นที่แก้/ดูข้อมูลคนนั้นได้"""
-    return actor["role"] == "admin" or actor["id"] == user_id
+def can_touch(actor: User, owner_id: int | None) -> bool:
+    """เจ้าของข้อมูลเอง หรือผู้ดูแลระบบ เท่านั้นที่ดู/แก้ข้อมูลนั้นได้"""
+    return actor.role == "admin" or actor.id == owner_id
 
 
-def public_user(user: dict) -> dict:
-    """ตัด password_hash ออกเสมอก่อนส่งออกทาง API"""
-    return {k: v for k, v in user.items() if not k.startswith("_") and k != "password_hash"}
-
-
-# ---------- สร้างบัญชี ----------
-
-def next_user_id() -> int:
-    USER_SEQ["value"] += 1
-    return USER_SEQ["value"]
-
-
-def build_user(username: str, password: str, full_name: str, email: str,
-               phone: str, role: str = "customer") -> dict:
-    """ประกอบ record ผู้ใช้ 1 คน (แฮชรหัสผ่านให้เรียบร้อย) แล้วเก็บลง USERS"""
-    user = {
-        "id": next_user_id(),
-        "username": username,
-        "full_name": full_name,
-        "email": email,
-        "phone": phone,
-        "role": role,
-        "is_active": True,
-        "password_hash": hash_password(password),
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-        "updated_at": datetime.now().isoformat(timespec="seconds"),
+def public_user(user: User) -> dict:
+    """ส่งออกเฉพาะฟิลด์ที่เปิดเผยได้ — ไม่มี password_hash เด็ดขาด"""
+    return {
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "role": user.role,
+        "is_active": user.is_active,
+        "created_at": user.created_at.isoformat(),
+        "updated_at": user.updated_at.isoformat(),
     }
-    USERS[user["id"]] = user
+
+
+# ---------- สร้าง/ค้นหาบัญชี ----------
+
+def build_user(db: Session, username: str, password: str, full_name: str, email: str,
+               phone: str, role: str = "customer") -> User:
+    """สร้างผู้ใช้ 1 คน (แฮชรหัสผ่านให้เรียบร้อย) แล้วบันทึกลงฐานข้อมูล"""
+    user = User(
+        username=username,
+        full_name=full_name,
+        email=email,
+        phone=phone,
+        role=role,
+        password_hash=hash_password(password),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return user
 
 
-def find_by_username(username: str) -> dict | None:
+def find_by_username(db: Session, username: str) -> User | None:
     lowered = username.strip().lower()
-    return next((u for u in USERS.values() if u["username"].lower() == lowered), None)
+    return db.exec(select(User).where(func.lower(User.username) == lowered)).first()
 
 
-def find_by_email(email: str) -> dict | None:
+def find_by_email(db: Session, email: str) -> User | None:
     lowered = email.strip().lower()
-    return next((u for u in USERS.values() if u["email"].lower() == lowered), None)
-
-
-def seed_users() -> None:
-    """สร้างบัญชีตัวอย่างตอนแอปเริ่มทำงาน (เรียกครั้งเดียวจาก main.py)"""
-    if USERS:
-        return
-    for seed in SEED_USERS:
-        build_user(
-            username=seed["username"],
-            password=seed["password"],
-            full_name=seed["full_name"],
-            email=seed["email"],
-            phone=seed["phone"],
-            role=seed["role"],
-        )
+    return db.exec(select(User).where(func.lower(User.email) == lowered)).first()

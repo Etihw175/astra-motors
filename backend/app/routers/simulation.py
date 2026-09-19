@@ -2,13 +2,13 @@
 # ทุกผลลัพธ์เป็นการประเมินเชิงการศึกษาจากค่าจำลองใน data.py ไม่ใช่ข้อมูลรับรองจากผู้ผลิต
 import math
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
+from sqlmodel import Session, select
 
-from ..data import (
-    CARS,
-    THAI_ROAD_PRESETS,
-    TRIP_BKK_CHIANGMAI_KM,
-)
+from ..crud import car_dict, get_car_or_404
+from ..data import THAI_ROAD_PRESETS, TRIP_BKK_CHIANGMAI_KM
+from ..database import get_session
+from ..models import Car
 from ..schemas import SimulationCreate
 
 router = APIRouter(prefix="/api/simulation", tags=["simulation"])
@@ -17,13 +17,6 @@ router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 WEIGHTS = {"flood": 30, "bump": 20, "rough": 20, "fuel": 15, "rain": 15}
 
 USABLE_TANK = 0.9   # ไม่ขับจนน้ำมันหมดถัง เผื่อสำรอง 10%
-
-
-def _find_car(car_id: str) -> dict:
-    for car in CARS:
-        if car["id"] == car_id:
-            return car
-    raise HTTPException(status_code=404, detail="ไม่พบรุ่นรถที่ต้องการ")
 
 
 def _effective_clearance_mm(car: dict, front_lift: bool) -> tuple[int, int]:
@@ -276,12 +269,12 @@ def conditions():
 
 
 @router.post("", summary="จำลองการใช้งานรถรุ่นที่เลือกบนถนนไทย")
-def simulate(body: SimulationCreate):
+def simulate(body: SimulationCreate, db: Session = Depends(get_session)):
     """ประเมิน 5 ด้าน: น้ำท่วม, ลูกระนาด, หลุมบ่อ, ฝนตก และค่าน้ำมัน
 
     พร้อมจัดอันดับรถทุกรุ่นภายใต้เงื่อนไขเดียวกัน เพื่อให้เทียบกันได้ตรง ๆ
     """
-    car = _find_car(body.car_id)
+    car = car_dict(get_car_or_404(db, body.car_id))
     result = _evaluate(car, body)
 
     if body.front_lift and not result["clearance"]["front_lift_available"]:
@@ -291,7 +284,7 @@ def simulate(body: SimulationCreate):
 
     # จัดอันดับทุกรุ่นด้วยเงื่อนไขชุดเดียวกัน (รุ่นที่ไม่มีระบบยกหน้าจะไม่ได้ระยะเพิ่ม)
     ranking = []
-    for other in CARS:
+    for other in (car_dict(c) for c in db.exec(select(Car)).all()):
         scored = _evaluate(other, body.model_copy(update={"car_id": other["id"]}))
         ranking.append({
             "car_id": other["id"],

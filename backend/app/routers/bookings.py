@@ -1,146 +1,183 @@
-# Router: จองทดลองขับ + จองรถออนไลน์ (journey ขั้นตอน 4, 6, 8)
-# ข้อมูลเก็บใน memory ชั่วคราว — restart แล้วหาย (สัปดาห์ที่ 2 จะย้ายลง PostgreSQL)
+# Router: จองทดลองขับ + จองรถออนไลน์ + นัดรับรถ (journey ขั้นตอน 4, 5)
+# - จองทดลองขับ: guest จองได้ ถ้าล็อกอินอยู่จะผูกเข้าบัญชี (ดูใน "การจองของฉัน" + ได้คะแนน)
+# - จองซื้อรถ: ต้องล็อกอิน (มีการชำระเงินและข้อมูลส่วนตัว) และเจ้าของ/ผู้ดูแลเท่านั้นที่ดู/แก้ได้
 from datetime import date as date_cls, datetime, timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
 
-from ..data import (
-    BOOKING_FEE,
-    CARS,
-    DELIVERY_DOCUMENTS,
-    PRICE_LOCK_DAYS,
-    REFUND_FULL_WITHIN_DAYS,
-    SHOWROOMS,
-    TESTDRIVE_HOURS,
+from ..crud import (
+    get_car_or_404,
+    get_owned_reservation,
+    get_showroom_or_404,
+    loan_dict,
+    new_code,
+    reservation_dict,
+    service_dict,
+    testdrive_dict,
 )
+from ..data import BOOKING_FEE, PRICE_LOCK_DAYS, REFUND_FULL_WITHIN_DAYS, TESTDRIVE_HOURS
+from ..database import get_session
+from ..events import publish
+from ..models import Loan, Reservation, ServiceAppointment, TestDrive, User
 from ..schemas import DeliveryCreate, ReservationCreate, TestDriveCreate
-from .showrooms import _is_slot_taken
+from ..security import can_touch, get_current_user, get_optional_user
+from .loans import settle_due_loans
+from .showrooms import is_slot_taken, parse_future_date
 
 router = APIRouter(prefix="/api", tags=["bookings"])
-
-TESTDRIVES: dict[str, dict] = {}
-RESERVATIONS: dict[str, dict] = {}
-_counter = {"testdrive": 0, "reservation": 0}
-
-
-def _find_car(car_id: str) -> dict:
-    for car in CARS:
-        if car["id"] == car_id:
-            return car
-    raise HTTPException(status_code=404, detail="ไม่พบรุ่นรถที่ต้องการ")
 
 
 # ---------- จองทดลองขับ (ขั้นตอน 4) ----------
 
+def _get_testdrive(db: Session, code: str, user: User | None) -> TestDrive:
+    record = db.get(TestDrive, code)
+    if record is None:
+        raise HTTPException(status_code=404, detail="ไม่พบการจองทดลองขับ")
+    # การจองที่ผูกบัญชีแล้ว ดูได้เฉพาะเจ้าของ/ผู้ดูแล — การจองแบบ guest ใช้รหัสจอง (สุ่ม เดาไม่ได้) แทนรหัสผ่าน
+    if record.user_id is not None and (user is None or not can_touch(user, record.user_id)):
+        raise HTTPException(status_code=404, detail="ไม่พบการจองทดลองขับ")
+    return record
+
+
 @router.post("/testdrives", status_code=201)
-def create_testdrive(body: TestDriveCreate):
-    car = _find_car(body.car_id)
-    showroom = next((s for s in SHOWROOMS if s["id"] == body.showroom_id), None)
-    if not showroom:
-        raise HTTPException(status_code=404, detail="ไม่พบโชว์รูม")
+def create_testdrive(
+    body: TestDriveCreate,
+    user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_session),
+):
+    car = get_car_or_404(db, body.car_id)
+    get_showroom_or_404(db, body.showroom_id)
     if not body.has_license:
         raise HTTPException(status_code=400, detail="ผู้ทดลองขับต้องมีใบขับขี่")
     if body.time not in TESTDRIVE_HOURS:
         raise HTTPException(status_code=400, detail="ช่วงเวลาไม่ถูกต้อง")
-    try:
-        requested = date_cls.fromisoformat(body.date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="รูปแบบวันที่ไม่ถูกต้อง")
-    if requested <= date_cls.today():
-        raise HTTPException(status_code=400, detail="กรุณาเลือกวันล่วงหน้าอย่างน้อย 1 วัน")
-    if _is_slot_taken(body.showroom_id, body.date, body.time):
+    day = parse_future_date(body.date)
+    if is_slot_taken(db, body.showroom_id, day, body.time):
         raise HTTPException(status_code=409, detail="ช่วงเวลานี้ถูกจองแล้ว กรุณาเลือกเวลาอื่น")
 
-    _counter["testdrive"] += 1
-    code = f"TD-{datetime.now():%y%m}-{_counter['testdrive']:04d}"
-    record = {
-        "code": code,
-        "car": {"id": car["id"], "name": car["name"]},
-        "showroom": showroom,
-        "date": body.date,
-        "time": body.time,
-        "name": body.name,
-        "phone": body.phone,
-        "contact_message_only": body.contact_message_only,
-        "status": "confirmed",
-        "created_at": datetime.now().isoformat(),
-    }
-    TESTDRIVES[code] = record
-    return record
+    record = TestDrive(
+        code=new_code("TD"),
+        user_id=user.id if user else None,
+        car_id=car.id,
+        showroom_id=body.showroom_id,
+        date=day,
+        time=body.time,
+        name=body.name.strip(),
+        phone=body.phone.strip(),
+        contact_message_only=body.contact_message_only,
+    )
+    db.add(record)
+    publish(db, "testdrive.booked", record=record, car=car)
+    db.commit()
+    db.refresh(record)
+    return testdrive_dict(record, db)
 
 
 @router.get("/testdrives/{code}")
-def get_testdrive(code: str):
-    if code not in TESTDRIVES:
-        raise HTTPException(status_code=404, detail="ไม่พบการจองทดลองขับ")
-    return TESTDRIVES[code]
+def get_testdrive(
+    code: str,
+    user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_session),
+):
+    return testdrive_dict(_get_testdrive(db, code, user), db)
 
 
-# ---------- จองรถออนไลน์ (ขั้นตอน 6) ----------
+@router.post("/testdrives/{code}/cancel")
+def cancel_testdrive(
+    code: str,
+    user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_session),
+):
+    """ยกเลิกนัดทดลองขับ — คิวเวลานั้นกลับมาว่างให้ลูกค้าคนอื่นทันที"""
+    record = _get_testdrive(db, code, user)
+    if record.status == "cancelled":
+        raise HTTPException(status_code=400, detail="นัดทดลองขับนี้ถูกยกเลิกไปแล้ว")
+    if record.date <= date_cls.today():
+        raise HTTPException(status_code=400, detail="ยกเลิกได้ก่อนวันนัดอย่างน้อย 1 วัน กรุณาติดต่อโชว์รูม")
+    record.status = "cancelled"
+    db.add(record)
+    publish(db, "testdrive.cancelled", record=record)
+    db.commit()
+    db.refresh(record)
+    return testdrive_dict(record, db)
+
+
+# ---------- จองรถออนไลน์ (ขั้นตอน 5) ----------
 
 @router.post("/reservations", status_code=201)
-def create_reservation(body: ReservationCreate):
-    car = _find_car(body.car_id)
-    color = next((c for c in car["colors"] if c["id"] == body.color_id), None)
+def create_reservation(
+    body: ReservationCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    car = get_car_or_404(db, body.car_id)
+    color = next((c for c in car.colors if c["id"] == body.color_id), None)
     if not color:
         raise HTTPException(status_code=404, detail="ไม่พบสีที่เลือก")
     if body.payment_method not in ("promptpay", "card"):
         raise HTTPException(status_code=400, detail="ช่องทางชำระเงินไม่ถูกต้อง")
 
-    options = [o for o in car["options"] if o["id"] in body.option_ids]
-    total = car["price"] + color["extra"] + sum(o["price"] for o in options)
+    options = [o for o in car.options if o["id"] in body.option_ids]
+    total = car.price + color["extra"] + sum(o["price"] for o in options)
 
     # ล็อกราคา/โปรโมชั่น ณ วันที่ออกใบจอง (edge case: ราคา/โปรฯ เปลี่ยนภายหลังไม่กระทบใบจองนี้)
-    now = datetime.now()
-    lock_until = (now + timedelta(days=PRICE_LOCK_DAYS)).date().isoformat()
-    promo = car.get("promotion")
-    promo_active = bool(promo) and date_cls.fromisoformat(promo["expires"]) >= now.date()
+    today = date_cls.today()
+    promo = car.promotion
+    promo_active = bool(promo) and date_cls.fromisoformat(promo["expires"]) >= today
 
-    _counter["reservation"] += 1
-    code = f"ADR-{now:%y%m}-{_counter['reservation']:04d}"
-    record = {
-        "code": code,
-        "status": "reserved",  # reserved -> delivery_scheduled | cancelled
-        "car": {"id": car["id"], "name": car["name"], "base_price": car["price"]},
-        "color": color,
-        "options": options,
-        "total_price": total,
-        "booking_fee": BOOKING_FEE,
-        "payment_method": body.payment_method,
-        "promotion": promo if promo_active else None,
-        "promotion_expired": bool(promo) and not promo_active,
-        "price_locked_until": lock_until,
-        "customer": {"name": body.name, "phone": body.phone, "email": body.email},
-        "contact_message_only": body.contact_message_only,
-        "loan_id": None,
-        "delivery_date": None,
-        "created_at": now.isoformat(),
-    }
-    RESERVATIONS[code] = record
-    return record
+    record = Reservation(
+        code=new_code("ADR"),
+        user_id=user.id,
+        car_id=car.id,
+        car_name=car.name,
+        base_price=car.price,
+        color=color,
+        options=options,
+        total_price=total,
+        booking_fee=BOOKING_FEE,
+        payment_method=body.payment_method,
+        promotion=promo if promo_active else None,
+        promotion_expired=bool(promo) and not promo_active,
+        price_locked_until=today + timedelta(days=PRICE_LOCK_DAYS),
+        customer_name=body.name.strip(),
+        customer_phone=body.phone.strip(),
+        customer_email=body.email.strip(),
+        contact_message_only=body.contact_message_only,
+    )
+    db.add(record)
+    publish(db, "reservation.created", record=record)
+    db.commit()
+    db.refresh(record)
+    return reservation_dict(record)
 
 
 @router.get("/reservations/{code}")
-def get_reservation(code: str):
-    if code not in RESERVATIONS:
-        raise HTTPException(status_code=404, detail="ไม่พบใบจองรหัสนี้ กรุณาตรวจสอบรหัสอีกครั้ง")
-    return RESERVATIONS[code]
+def get_reservation(
+    code: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    return reservation_dict(get_owned_reservation(db, code, user))
 
 
 @router.post("/reservations/{code}/cancel")
-def cancel_reservation(code: str):
+def cancel_reservation(
+    code: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
     """ยกเลิกใบจอง (edge case) — เงินจองคืนเต็มจำนวนถ้ายกเลิกภายในกำหนด"""
-    record = RESERVATIONS.get(code)
-    if not record:
-        raise HTTPException(status_code=404, detail="ไม่พบใบจองรหัสนี้")
-    if record["status"] == "cancelled":
+    record = get_owned_reservation(db, code, user)
+    if record.status == "cancelled":
         raise HTTPException(status_code=400, detail="ใบจองนี้ถูกยกเลิกไปแล้ว")
+    if record.status == "delivery_scheduled":
+        raise HTTPException(status_code=400, detail="นัดรับรถแล้ว ยกเลิกออนไลน์ไม่ได้ กรุณาติดต่อโชว์รูม")
 
-    created = datetime.fromisoformat(record["created_at"])
-    within_full_refund = (datetime.now() - created).days < REFUND_FULL_WITHIN_DAYS
-    record["status"] = "cancelled"
-    record["refund"] = {
-        "amount": BOOKING_FEE if within_full_refund else int(BOOKING_FEE * 0.5),
+    within_full_refund = (datetime.now() - record.created_at).days < REFUND_FULL_WITHIN_DAYS
+    record.status = "cancelled"
+    record.refund = {
+        "amount": record.booking_fee if within_full_refund else int(record.booking_fee * 0.5),
         "full_refund": within_full_refund,
         "note": (
             "ได้รับเงินจองคืนเต็มจำนวนภายใน 5-7 วันทำการ"
@@ -148,25 +185,67 @@ def cancel_reservation(code: str):
             else f"ยกเลิกหลัง {REFUND_FULL_WITHIN_DAYS} วัน ได้รับคืน 50% ตามเงื่อนไขใบจอง"
         ),
     }
-    return record
+    db.add(record)
+    publish(db, "reservation.cancelled", record=record)
+    db.commit()
+    db.refresh(record)
+    return reservation_dict(record)
 
 
 @router.post("/reservations/{code}/delivery")
-def schedule_delivery(code: str, body: DeliveryCreate):
-    """นัดรับรถหลังสินเชื่ออนุมัติ (ขั้นตอน 8) — คืนรายการเอกสารที่ต้องเตรียม"""
-    record = RESERVATIONS.get(code)
-    if not record:
-        raise HTTPException(status_code=404, detail="ไม่พบใบจองรหัสนี้")
-    if record["status"] == "cancelled":
+def schedule_delivery(
+    code: str,
+    body: DeliveryCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    """นัดรับรถ — ต้องมีสินเชื่อที่อนุมัติแล้ว (หรือไม่ได้ยื่นสินเชื่อ = ซื้อเงินสด)"""
+    record = get_owned_reservation(db, code, user)
+    if record.status == "cancelled":
         raise HTTPException(status_code=400, detail="ใบจองนี้ถูกยกเลิกแล้ว ไม่สามารถนัดรับรถได้")
-    try:
-        requested = date_cls.fromisoformat(body.date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="รูปแบบวันที่ไม่ถูกต้อง")
-    if requested <= date_cls.today():
-        raise HTTPException(status_code=400, detail="กรุณาเลือกวันล่วงหน้าอย่างน้อย 1 วัน")
+    if record.loan_id:
+        settle_due_loans(db)
+        loan = db.get(Loan, record.loan_id)
+        if loan and loan.status != "approved":
+            raise HTTPException(status_code=400, detail="ต้องรอสินเชื่ออนุมัติก่อน จึงจะนัดวันรับรถได้")
+    day = parse_future_date(body.date)
 
-    record["delivery_date"] = body.date
-    record["status"] = "delivery_scheduled"
-    record["delivery_documents"] = DELIVERY_DOCUMENTS
-    return record
+    record.delivery_date = day
+    record.status = "delivery_scheduled"
+    db.add(record)
+    publish(db, "delivery.scheduled", record=record)
+    db.commit()
+    db.refresh(record)
+    return reservation_dict(record)
+
+
+# ---------- ภาพรวมการจองทั้งหมดของฉัน (ขั้นตอน 6 ติดตามสถานะ) ----------
+
+@router.get("/me/bookings", tags=["users"], summary="การจองทั้งหมดของฉัน")
+def my_bookings(user: User = Depends(get_current_user), db: Session = Depends(get_session)):
+    """รวมทุกอย่างที่ผูกกับบัญชีไว้ในที่เดียว: ทดลองขับ, ใบจอง (+ สถานะสินเชื่อ), นัดเข้าศูนย์"""
+    settle_due_loans(db)
+    testdrives = db.exec(
+        select(TestDrive).where(TestDrive.user_id == user.id).order_by(TestDrive.created_at.desc())
+    ).all()
+    reservations = db.exec(
+        select(Reservation).where(Reservation.user_id == user.id).order_by(Reservation.created_at.desc())
+    ).all()
+    services = db.exec(
+        select(ServiceAppointment)
+        .where(ServiceAppointment.user_id == user.id)
+        .order_by(ServiceAppointment.created_at.desc())
+    ).all()
+
+    items = []
+    for r in reservations:
+        data = reservation_dict(r)
+        loan = db.get(Loan, r.loan_id) if r.loan_id else None
+        data["loan"] = loan_dict(loan) if loan else None
+        items.append(data)
+
+    return {
+        "testdrives": [testdrive_dict(t, db) for t in testdrives],
+        "reservations": items,
+        "service_appointments": [service_dict(s, db) for s in services],
+    }

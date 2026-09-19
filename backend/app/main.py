@@ -4,32 +4,54 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routers import auth, bookings, cars, finance, loans, showrooms, simulation, users
-from .security import seed_users
+from sqlalchemy import text
+
+from .database import IS_SQLITE, engine, init_db
+from .routers import (
+    after_sales,
+    auth,
+    bookings,
+    cars,
+    documents,
+    finance,
+    loans,
+    notifications,
+    reviews,
+    showrooms,
+    simulation,
+    users,
+)
 
 app = FastAPI(
     title="ASTRA Motors API",
-    description="API จำลองสำหรับระบบเปรียบเทียบรถ จองทดลองขับ และจอง/ขอสินเชื่อออนไลน์ "
-                "(User Journey #15 ยานยนต์) พร้อมระบบสมาชิกและจัดการผู้ใช้ (Authentication / User Management)",
-    version="0.2.0",
+    description="ระบบจองทดลองขับและซื้อรถออนไลน์ (Online Test Drive & Car Purchase System) "
+                "ครบ 7 ขั้นตอนของ User Journey: รับรู้ → ค้นหา → ดูรายละเอียด → จองทดลองขับ → "
+                "ซื้อออนไลน์ → ติดตามสถานะ → หลังการขาย — ข้อมูลทั้งหมดเก็บในฐานข้อมูล (PostgreSQL/SQLite)",
+    version="0.3.0",
 )
 
-# สร้างบัญชีตัวอย่างตอนแอปเริ่มทำงาน (admin / somchai / nattaya)
-seed_users()
+# สร้างตาราง + seed แคตตาล็อกและบัญชีตัวอย่าง (admin / somchai / nattaya)
+init_db()
 
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(cars.router)
-app.include_router(showrooms.router)
-app.include_router(finance.router)
-app.include_router(bookings.router)
-app.include_router(loans.router)
-app.include_router(simulation.router)
+# เรียงตาม service ในแผนภาพสถาปัตยกรรม (docs/architecture/)
+for module in (
+    auth, users,                    # Identity service
+    cars, showrooms, finance,       # Catalog service
+    bookings,                       # Booking + Order service
+    loans, documents,               # Finance service
+    notifications,                  # Notification service
+    reviews, after_sales,           # After-sales + Loyalty service
+    simulation,                     # Simulation service
+):
+    app.include_router(module.router)
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    """ใช้ทั้ง healthcheck ของ Docker และเช็คว่าเชื่อมฐานข้อมูลได้จริง"""
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    return {"status": "ok", "database": "sqlite" if IS_SQLITE else "postgresql"}
 
 
 # หาโฟลเดอร์ frontend: ใน Docker คือ /app/frontend, รันตรงจากเครื่องคือ <repo>/frontend

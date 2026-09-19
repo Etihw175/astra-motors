@@ -38,7 +38,8 @@ class LoanCreate(BaseModel):
     phone: str = Field(..., min_length=9, max_length=15)
     occupation: str
     monthly_income: int = Field(..., gt=0)
-    documents: list[str] = Field(default=[], description="ชื่อไฟล์เอกสารที่แนบ (จำลอง)")
+    document_ids: list[str] = Field(default=[], max_length=10,
+                                    description="id เอกสารที่อัปโหลดผ่าน POST /api/documents")
     consent_pdpa: bool = Field(..., description="ยินยอมให้ใช้ข้อมูลตาม PDPA")
 
 
@@ -113,3 +114,26 @@ class SimulationCreate(BaseModel):
     km_per_year: int = Field(12000, ge=1000, le=100000, description="ระยะทางที่ใช้ต่อปี (กม.)")
     traffic_share_pct: int = Field(60, ge=0, le=100, description="สัดส่วนระยะทางที่วิ่งในเมือง/รถติด (%)")
     fuel_price: float = Field(41.5, gt=0, le=100, description="ราคาน้ำมันต่อลิตร (บาท)")
+
+
+# ---------- บริการหลังการขาย ----------
+
+class ReviewCreate(BaseModel):
+    car_id: str
+    rating: int = Field(..., ge=1, le=5, description="คะแนน 1-5 ดาว")
+    title: str = Field(..., min_length=2, max_length=80)
+    comment: str = Field(..., min_length=10, max_length=1000)
+
+
+class ServiceAppointmentCreate(BaseModel):
+    car_id: str
+    showroom_id: str = Field(..., description="สาขาที่มีศูนย์บริการ")
+    date: str = Field(..., description="วันที่นัด รูปแบบ YYYY-MM-DD")
+    time: str = Field(..., description="เวลานัด เช่น 08:30")
+    service_type: str = Field(..., description="ดูรายการจาก GET /api/service/types")
+    mileage_km: int = Field(..., ge=0, le=1_000_000, description="เลขไมล์ปัจจุบัน")
+    note: str = Field("", max_length=500)
+
+
+class RedeemCreate(BaseModel):
+    reward_id: str
