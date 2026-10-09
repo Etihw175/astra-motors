@@ -102,6 +102,8 @@ const API = {
   /* ---------- แจ้งเตือน (ติดตามสถานะ) ---------- */
   notifications: (limit = 15) => _api(`/api/notifications?limit=${limit}`),
   unreadCount: () => _api("/api/notifications/unread-count"),
+  // ตั๋วอายุสั้นสำหรับเปิดสตรีม SSE (EventSource แนบ header Authorization เองไม่ได้)
+  streamTicket: () => _api("/api/notifications/stream-ticket", { method: "POST" }),
   readNotification: (id) => _api(`/api/notifications/${id}/read`, { method: "POST" }),
   readAllNotifications: () => _api("/api/notifications/read-all", { method: "POST" }),
 

@@ -31,10 +31,10 @@
 | Order | 5–6 | `/api/reservations` `/{code}/cancel` `/{code}/delivery` `/api/me/bookings` | `reservations` | publish `reservation.created`, `reservation.cancelled`, `delivery.scheduled` |
 | Finance | 5–6 | `/api/loans` `/api/loans/{id}` `/api/documents` | `loans`, `documents` | publish `loan.submitted`, `loan.decided` |
 | After-sales | 7 | `/api/service/types` `/api/service/slots` `/api/service/appointments` `/api/reviews` | `service_appointments`, `reviews` | publish `service.booked`, `service.cancelled`, `review.posted`, `review.deleted` |
-| Notification | 6 | `/api/notifications` `/unread-count` `/read-all` | `notifications` | subscribe ทุก event ที่ลูกค้าควรรู้ |
+| Notification | 6 | `/api/notifications` `/unread-count` `/read-all` `/stream-ticket` `/stream` (SSE push) | `notifications` | subscribe ทุก event ที่ลูกค้าควรรู้ — ส่งถึงเบราว์เซอร์แบบ push (SSE) และมี poll เป็น fallback |
 | Loyalty | 7 | `/api/loyalty` `/api/loyalty/redeem` | `point_transactions` | subscribe จอง/รีวิว/นัดศูนย์ (+คะแนน) และการยกเลิก (หักคืน), publish `points.redeemed` |
 
-### ตัวอย่างการไหลของ event: ผลสินเชื่อออก → ลูกค้าเห็นแจ้งเตือน
+### ตัวอย่างการไหลของ event: ผลสินเชื่อออก → ลูกค้าเห็นแจ้งเตือน (SSE push, poll เป็น fallback)
 
 ```mermaid
 sequenceDiagram
@@ -45,15 +45,21 @@ sequenceDiagram
     participant N as Notification Service
     participant DB as PostgreSQL
 
-    B->>G: GET /api/notifications/unread-count (ทุก 15 วินาที)
-    G->>F: settle_due_loans()
+    B->>G: POST /api/notifications/stream-ticket (Bearer) — ขอตั๋วอายุ 30 วินาที ใช้ครั้งเดียว
+    G-->>B: { ticket }
+    B->>G: GET /api/notifications/stream?ticket=… (EventSource ค้างไว้)
+    G-->>B: event: unread
+    loop ทุก 2 วินาทีในสตรีม
+        G->>F: settle_due_loans()
+    end
     F->>DB: UPDATE loans SET status='approved'
     F->>E: publish loan.decided
     E->>N: handler(loan)
     N->>DB: INSERT notifications
     Note over F,DB: commit ครั้งเดียว — สำเร็จพร้อมกัน/ยกเลิกพร้อมกัน
-    G-->>B: { unread: 1 }
+    G-->>B: event: notification + event: unread (push ทันที ไม่ต้องรอรอบ poll)
     B->>B: toast "สินเชื่อได้รับการอนุมัติ" + ตัวเลขบนกระดิ่ง
+    Note over B,G: สตรีมพัง/เบราว์เซอร์ไม่รองรับ EventSource → fallback ไป poll /unread-count ทุก 15 วินาที
 ```
 
 ### สถานะการแยก service (ตรงไปตรงมา)

@@ -1,10 +1,22 @@
 # Router + Notification service (journey ขั้นตอน 6: แจ้งเตือนความคืบหน้า ไม่ต้องโทรถามโชว์รูม)
 # service นี้ไม่ถูกเรียกตรง ๆ จาก router อื่น — สมัครรับ event จาก events.py แล้วสร้างแจ้งเตือนเอง
-from fastapi import APIRouter, Depends, HTTPException, Query
+#
+# ส่งถึงหน้าเว็บได้ 2 ทาง:
+#   - pull (poll): GET /api/notifications, /unread-count — เบราว์เซอร์ถามเองเป็นรอบ ๆ ใช้เป็น fallback
+#   - push (SSE):  GET /api/notifications/stream — เซิร์ฟเวอร์ดันแจ้งเตือนใหม่ให้ทันที ไม่ต้องรอรอบ poll
+import asyncio
+import hashlib
+import json
+import secrets
+from datetime import datetime, timedelta
+
+import anyio
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session, func, select, update
 
 from ..data import POINTS_EARN
-from ..database import get_session
+from ..database import engine, get_session
 from ..events import subscribe
 from ..models import Notification, User
 from ..security import get_current_user
@@ -149,7 +161,7 @@ def _unread_count(db: Session, user_id: int) -> int:
     ).one()
 
 
-@router.get("/unread-count", summary="จำนวนแจ้งเตือนที่ยังไม่อ่าน (หน้าเว็บ poll ทุก 15 วินาที)")
+@router.get("/unread-count", summary="จำนวนแจ้งเตือนที่ยังไม่อ่าน (fallback ตอนเปิดสตรีม SSE ไม่ได้ — poll ทุก 15 วินาที)")
 def unread_count(user: User = Depends(get_current_user), db: Session = Depends(get_session)):
     settle_due_loans(db)
     return {"unread": _unread_count(db, user.id)}
@@ -179,3 +191,139 @@ def mark_all_read(user: User = Depends(get_current_user), db: Session = Depends(
     )
     db.commit()
     return {"unread": 0}
+
+
+# ---------- แจ้งเตือนแบบ push (Server-Sent Events) ----------
+# ทำไมต้องมี "ตั๋ว" แยกจาก Bearer token:
+#   EventSource ของเบราว์เซอร์แนบ HTTP header เองไม่ได้ จึงส่ง Authorization ไปกับสตรีมไม่ได้
+#   และ "ห้าม" เอา token ไปใส่ query string เพราะ URL จะไปติด access log ของ proxy/เซิร์ฟเวอร์
+#   -> ขอตั๋วอายุสั้น ใช้ครั้งเดียวด้วย Bearer ตามปกติก่อน แล้วเอาตั๋วนั้นไปเปิดสตรีมแทน
+TICKET_TTL_SECONDS = 30        # ตั๋วอายุสั้นมาก พอให้เปิดสตรีมทันทีเท่านั้น
+STREAM_TICK_SECONDS = 2        # รอบเช็คแจ้งเตือนใหม่
+STREAM_HEARTBEAT_SECONDS = 15  # ส่ง comment กันเน็ต/proxy ตัดการเชื่อมต่อที่เงียบเกินไป
+STREAM_MAX_SECONDS = 30 * 60   # จำกัดอายุสตรีม แล้วปล่อยให้ EventSource ต่อใหม่เอง (กัน connection ค้าง)
+
+# เก็บตั๋วใน process (เหมือน event bus) ไม่ลงตาราง auth_sessions เพราะเป็นของชั่วคราวคนละชนิดกับ session
+# เก็บเฉพาะ SHA-256 ของตั๋วเหมือนที่ security.py ทำกับ token — หน่วยความจำรั่วก็เอาตั๋วไปใช้ไม่ได้
+_stream_tickets: dict[str, tuple[int, datetime]] = {}
+
+
+def _ticket_hash(ticket: str) -> str:
+    return hashlib.sha256(ticket.encode("utf-8")).hexdigest()
+
+
+def _issue_ticket(user_id: int) -> str:
+    now_ = datetime.now()
+    # เก็บกวาดตั๋วหมดอายุทุกครั้งที่ออกใบใหม่ (dict นี้จึงไม่โตไม่หยุด)
+    for key, (_, expires_at) in list(_stream_tickets.items()):
+        if expires_at < now_:
+            del _stream_tickets[key]
+    ticket = secrets.token_urlsafe(32)
+    _stream_tickets[_ticket_hash(ticket)] = (user_id, now_ + timedelta(seconds=TICKET_TTL_SECONDS))
+    return ticket
+
+
+def _claim_ticket(ticket: str) -> int:
+    """ใช้ตั๋ว 1 ครั้งแล้วลบทิ้งทันที — ดักซ้ำ/หมดอายุ/ปลอม คืน 401 ทั้งหมด"""
+    found = _stream_tickets.pop(_ticket_hash(ticket), None)
+    if found is None:
+        raise HTTPException(status_code=401, detail="ตั๋วสตรีมไม่ถูกต้องหรือถูกใช้ไปแล้ว กรุณาขอตั๋วใหม่")
+    user_id, expires_at = found
+    if expires_at < datetime.now():
+        raise HTTPException(status_code=401, detail="ตั๋วสตรีมหมดอายุแล้ว กรุณาขอตั๋วใหม่")
+    return user_id
+
+
+def _sse(event: str, payload: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
+
+
+def _snapshot(user_id: int, after_id: int) -> tuple[list[dict], int, int]:
+    """อ่านสถานะกล่องแจ้งเตือน 1 รอบ — เปิด Session ใหม่สั้น ๆ แล้วปิดทันที
+
+    ห้ามถือ Session ค้างไว้ทั้งสตรีม เพราะสตรีมอยู่นานเป็นนาที จะกิน connection pool จนหมด
+    """
+    with Session(engine) as db:
+        settle_due_loans(db)   # ผลสินเชื่อที่ครบเวลาแล้วต้องกลายเป็นแจ้งเตือนก่อนเช็ค
+        rows = db.exec(
+            select(Notification)
+            .where(Notification.user_id == user_id, Notification.id > after_id)
+            .order_by(Notification.id)
+        ).all()
+        fresh = [
+            {
+                "id": r.id,
+                "kind": r.kind,
+                "title": r.title,
+                "message": r.message,
+                "link": r.link,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in rows
+        ]
+        unread = _unread_count(db, user_id)
+        last_id = fresh[-1]["id"] if fresh else after_id
+        return fresh, unread, last_id
+
+
+def _latest_id(user_id: int) -> int:
+    with Session(engine) as db:
+        return db.exec(
+            select(func.coalesce(func.max(Notification.id), 0)).where(Notification.user_id == user_id)
+        ).one()
+
+
+@router.post("/stream-ticket", summary="ขอตั๋วอายุสั้นเพื่อเปิดสตรีมแจ้งเตือน (SSE)")
+def stream_ticket(user: User = Depends(get_current_user)):
+    return {"ticket": _issue_ticket(user.id), "expires_in": TICKET_TTL_SECONDS}
+
+
+async def _notification_stream(request: Request, user_id: int, max_events: int | None):
+    # generator เป็น async + await asyncio.sleep เท่านั้น — time.sleep จะบล็อก event loop
+    # ของทั้งแอป (ทุกคนค้าง) ส่วนคิวรี DB เป็น sync จึงโยนไปรันใน thread แยก
+    last_id = await anyio.to_thread.run_sync(_latest_id, user_id)
+    fresh, unread, last_id = await anyio.to_thread.run_sync(_snapshot, user_id, last_id)
+
+    sent = 0
+    yield _sse("unread", {"unread": unread})   # event แรกทันทีที่เชื่อมต่อ หน้าเว็บจะได้ตัวเลขที่ถูกต้องเลย
+    sent += 1
+
+    started = datetime.now()
+    last_beat = started
+    while max_events is None or sent < max_events:
+        if (datetime.now() - started).total_seconds() >= STREAM_MAX_SECONDS:
+            break
+        await asyncio.sleep(STREAM_TICK_SECONDS)
+        if await request.is_disconnected():
+            break
+
+        fresh, unread, last_id = await anyio.to_thread.run_sync(_snapshot, user_id, last_id)
+        if fresh:
+            for item in fresh:
+                yield _sse("notification", item)
+                sent += 1
+            yield _sse("unread", {"unread": unread})
+            sent += 1
+            last_beat = datetime.now()
+            continue
+        if (datetime.now() - last_beat).total_seconds() >= STREAM_HEARTBEAT_SECONDS:
+            yield ": ping\n\n"   # comment ของ SSE — client ไม่เห็นเป็น event แต่ connection ยังมีชีวิต
+            last_beat = datetime.now()
+
+
+@router.get("/stream", summary="สตรีมแจ้งเตือนแบบเรียลไทม์ (SSE) — ต้องมีตั๋วจาก /stream-ticket")
+async def stream(
+    request: Request,
+    ticket: str = Query(..., description="ตั๋วจาก POST /api/notifications/stream-ticket"),
+    # ใช้เฉพาะในเทสต์เพื่อให้สตรีมจบเองหลังส่งครบ N event — ค่าปกติคือสตรีมยาวตามปกติ
+    max_events: int | None = Query(None, ge=1, include_in_schema=False),
+):
+    user_id = _claim_ticket(ticket)
+    return StreamingResponse(
+        _notification_stream(request, user_id, max_events),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # กัน nginx/proxy บัฟเฟอร์ไว้จนแจ้งเตือนไปไม่ถึงทันที
+        },
+    )

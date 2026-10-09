@@ -70,6 +70,8 @@ function renderAuthZone(activeKey) {
   initBell();
 
   document.getElementById("btn-logout").addEventListener("click", async () => {
+    _closeBellStream();   // ออกจากระบบแล้วสตรีมแจ้งเตือนของคนเดิมต้องหยุดทันที
+    _stopBellPoll();
     try {
       await API.logout();
     } catch {
@@ -82,10 +84,19 @@ function renderAuthZone(activeKey) {
 }
 
 /* ---------- กระดิ่งแจ้งเตือน (journey ขั้นตอน 6) ----------
-   poll จำนวนที่ยังไม่อ่านทุก 15 วินาที — มีเรื่องใหม่ (เช่น ผลสินเชื่อออก) จะเด้ง toast ทันที */
+   ช่องทางหลักคือ SSE: เซิร์ฟเวอร์ push แจ้งเตือนใหม่มาทันที ไม่ต้องรอรอบ poll
+   แต่ยังต้องเก็บ poll ไว้เป็น fallback เพราะ EventSource อาจเปิดไม่ได้ (เบราว์เซอร์เก่า / proxy ตัด / เน็ตหลุด)
+   กฎสำคัญ: ห้ามให้ poll ทำงานซ้อนกับสตรีมพร้อมกัน ไม่งั้นยิง API ซ้ำเปล่า ๆ */
 
-const BELL_POLL_MS = 15000;
+const BELL_POLL_MS = 15000;          // รอบ poll ตอนที่ไม่มีสตรีม
+const BELL_RETRY_MS = 3000;          // หน่วงก่อนลองเปิดสตรีมใหม่ครั้งแรก
+const BELL_RETRY_MAX_MS = 60000;     // เพดานการถอยหลัง (3s → 6s → 12s → … → 60s)
 let _bellUnread = null;
+let _bellStream = null;              // EventSource ที่เปิดอยู่ (null = ยังไม่มีสตรีม)
+let _bellPollTimer = null;
+let _bellRetryTimer = null;
+let _bellRetryMs = BELL_RETRY_MS;
+let _bellUnloadHooked = false;
 
 function _timeAgo(iso) {
   const sec = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -154,6 +165,91 @@ async function _pollBell() {
   }
 }
 
+/* เปิด/ปิด poll — ใช้เป็น fallback ระหว่างที่สตรีมยังต่อไม่ติดเท่านั้น */
+function _startBellPoll() {
+  if (_bellPollTimer) return;        // กันตั้ง interval ซ้อนกันหลายอัน
+  _pollBell();
+  _bellPollTimer = setInterval(_pollBell, BELL_POLL_MS);
+}
+
+function _stopBellPoll() {
+  if (!_bellPollTimer) return;
+  clearInterval(_bellPollTimer);
+  _bellPollTimer = null;
+}
+
+function _closeBellStream() {
+  if (_bellStream) {
+    _bellStream.close();
+    _bellStream = null;
+  }
+  if (_bellRetryTimer) {
+    clearTimeout(_bellRetryTimer);
+    _bellRetryTimer = null;
+  }
+}
+
+// สตรีมพัง/ปิด → กลับไป poll ก่อน แล้วค่อย ๆ ถอยหลังไปขอตั๋วใหม่เปิดสตรีมใหม่ (exponential backoff)
+function _retryBellStream() {
+  _closeBellStream();
+  _startBellPoll();
+  if (!Auth.isLoggedIn()) return;
+  _bellRetryTimer = setTimeout(_openBellStream, _bellRetryMs);
+  _bellRetryMs = Math.min(_bellRetryMs * 2, BELL_RETRY_MAX_MS);
+}
+
+async function _openBellStream() {
+  if (!Auth.isLoggedIn()) return;
+  _closeBellStream();
+
+  let ticket;
+  try {
+    // ขอตั๋วก่อนเพราะ EventSource แนบ header Authorization เองไม่ได้ และห้ามส่ง token ใน URL
+    ticket = (await API.streamTicket()).ticket;
+  } catch {
+    _retryBellStream();
+    return;
+  }
+
+  const stream = new EventSource(`/api/notifications/stream?ticket=${encodeURIComponent(ticket)}`);
+  _bellStream = stream;
+
+  stream.addEventListener("open", () => {
+    _stopBellPoll();                 // สตรีมมาแล้ว ไม่ต้อง poll ซ้อน
+    _bellRetryMs = BELL_RETRY_MS;    // ต่อสำเร็จแล้ว รีเซ็ตการถอยหลัง
+  });
+
+  stream.addEventListener("unread", (e) => {
+    const data = _parseBellEvent(e);
+    if (!data) return;
+    _bellUnread = data.unread;
+    _setBellCount(data.unread);
+  });
+
+  stream.addEventListener("notification", (e) => {
+    const item = _parseBellEvent(e);
+    if (!item) return;
+    _bellUnread = (_bellUnread || 0) + 1;
+    _setBellCount(_bellUnread);
+    // toast() ใส่ข้อความด้วย textContent อยู่แล้ว ข้อความจากเซิร์ฟเวอร์จึงกลายเป็น HTML ไม่ได้ (ไม่ต้อง esc())
+    toast(`${item.title} — ${item.message}`, "ok");
+  });
+
+  // ตั๋วใช้ซ้ำไม่ได้ ดังนั้น reconnect อัตโนมัติของ EventSource จะโดน 401 — ต้องปิดแล้วขอตั๋วใหม่เอง
+  stream.addEventListener("error", () => {
+    if (_bellStream !== stream) return;   // สตรีมเก่าที่เลิกใช้แล้ว ไม่ต้องทำอะไร
+    _retryBellStream();
+  });
+}
+
+function _parseBellEvent(e) {
+  try {
+    return JSON.parse(e.data);
+  } catch {
+    return null;                     // data เสียหนึ่งรอบ ไม่ควรทำให้กระดิ่งเจ๊ง
+  }
+}
+
 function initBell() {
   const bell = document.getElementById("bell");
   const panel = document.getElementById("bell-panel");
@@ -172,8 +268,17 @@ function initBell() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") panel.classList.add("hidden");
   });
-  _pollBell();
-  setInterval(_pollBell, BELL_POLL_MS);
+  if (!_bellUnloadHooked) {
+    // ปิดสตรีมเมื่อออกจากหน้า — ไม่งั้นเซิร์ฟเวอร์ถือ connection ค้างไว้
+    window.addEventListener("pagehide", _closeBellStream);
+    _bellUnloadHooked = true;
+  }
+  if (typeof EventSource === "function") {
+    _pollBell();                     // เติมตัวเลขบนกระดิ่งทันทีหนึ่งรอบ ระหว่างรอขอตั๋ว/ต่อสตรีม
+    _openBellStream();
+  } else {
+    _startBellPoll();                // เบราว์เซอร์เก่าไม่รองรับ SSE — ใช้ poll อย่างเดิม
+  }
 }
 
 /* ---------- บังคับให้ล็อกอินก่อนเข้าหน้าที่ต้องใช้สิทธิ์ ---------- */
