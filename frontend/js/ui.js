@@ -665,6 +665,7 @@ function toast(message, type = "info", link = null) {
     a.className = "toast-link";
     el.append(" ", a);
   }
+  zone.appendChild(el);
   // มีลิงก์ให้กดต้องอยู่นานพออ่านจบแล้วเอื้อมไปกด (4.2 วินาทีไม่พอ)
   setTimeout(() => el.remove(), link ? 10000 : 4200);
 }
