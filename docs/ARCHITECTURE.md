@@ -25,15 +25,29 @@
 | Service | Journey | Endpoint หลัก | ตารางที่เป็นเจ้าของ | Event |
 |---|---|---|---|---|
 | Identity | ทุกขั้นตอน | `/api/register` `/api/login` `/api/logout` `/api/me` `/api/users` | `users`, `auth_sessions` | — |
-| Catalog | 1–3 | `/api/cars` (ค้นหา/กรอง/เรียง) `/api/cars/facets` `/api/promotions` `/api/showrooms` `/api/finance/plans` | `cars`, `showrooms`, `finance_plans` | — |
+| Catalog | 1–3 | `/api/cars` (ค้นหา/กรอง/เรียง) `/api/cars/facets` `/api/promotions` `/api/showrooms` `/api/finance/plans` `/api/watchlist` (รายการที่สนใจ) `/api/watchlist/ids` | `cars`, `showrooms`, `finance_plans`, `watchlist_items` | — |
 | Simulation | 3 | `POST /api/simulation` `/api/simulation/conditions` | — (stateless) | — |
 | Booking | 4 | `/api/showrooms/{id}/slots` `/api/testdrives` `/api/testdrives/{code}/cancel` | `test_drives` | publish `testdrive.booked`, `testdrive.cancelled` |
 | Order | 5–6 | `/api/reservations` `/{code}/cancel` `/{code}/delivery` `/api/me/bookings` | `reservations` | publish `reservation.created`, `reservation.cancelled`, `delivery.scheduled` |
 | Payment | 5 | `POST /api/payments` `/{id}` `/{id}/confirm` `/{id}/cancel` | `payments` | publish `payment.paid` (ออกใบจองตอนยืนยัน จึง publish `reservation.created` ต่อด้วย) |
 | Finance | 5–6 | `/api/loans` `/api/loans/{id}` `/api/documents` | `loans`, `documents` | publish `loan.submitted`, `loan.decided` |
 | After-sales | 7 | `/api/service/types` `/api/service/slots` `/api/service/appointments` `/api/reviews` | `service_appointments`, `reviews` | publish `service.booked`, `service.cancelled`, `review.posted`, `review.deleted` |
-| Notification | 6 | `/api/notifications` `/unread-count` `/read-all` `/stream-ticket` `/stream` (SSE push) | `notifications` | subscribe ทุก event ที่ลูกค้าควรรู้ — ส่งถึงเบราว์เซอร์แบบ push (SSE) และมี poll เป็น fallback |
+| Notification | 1, 6 | `/api/notifications` `/unread-count` `/read-all` `/stream-ticket` `/stream` (SSE push) | `notifications` | subscribe ทุก event ที่ลูกค้าควรรู้ — ส่งถึงเบราว์เซอร์แบบ push (SSE) และมี poll เป็น fallback + เช็คโปรฯ ของรถใน watchlist ที่ใกล้หมดอายุ (`promo.ending`) |
 | Loyalty | 7 | `/api/loyalty` `/api/loyalty/redeem` | `point_transactions` | subscribe จอง/รีวิว/นัดศูนย์ (+คะแนน) และการยกเลิก (หักคืน), publish `points.redeemed` |
+
+### รายการที่สนใจ (watchlist) อยู่ใน Catalog service ไม่แยกเป็น service ใหม่
+
+`watchlist_items` เก็บแค่ความสัมพันธ์ "ผู้ใช้คนนี้สนใจรุ่นนี้" ไม่มีกติกาธุรกิจของตัวเอง
+(ไม่มีราคา ไม่มีสถานะ ไม่มีการล็อกสิทธิ์) และทุก endpoint ของมันคืนข้อมูลรถจาก `cars`
+ผ่าน `crud.car_dict()` + `crud.rating_map()` ชุดเดียวกับหน้าแคตตาล็อก — ตั้งเป็น service ใหม่
+จะได้แค่ service ที่ต้อง join ข้ามฐานข้อมูลกับ Catalog ทุกคำขอ จึงจัดไว้กับ Catalog ตามเจ้าของข้อมูลจริง
+
+ส่วนการ "เตือนโปรฯ ใกล้หมด" แยกไปอยู่ Notification service เพราะไม่มีผู้กระทำมาจุดชนวน
+(ไม่มีใครกดอะไร มันเกิดจากวันที่เดินไปเอง) จึงใช้ event bus ไม่ได้ — ต้องเช็คตอนผู้ใช้เข้ามาดู
+กล่องแจ้งเตือน (`GET /api/notifications`, `/unread-count` และทุกรอบ tick ของสตรีม SSE)
+การกันแจ้งซ้ำไม่ได้เพิ่มคอลัมน์ใหม่ แต่ฝังรหัสรถ + วันหมดอายุไว้ใน `link` ของแจ้งเตือน
+(`/pages/model.html?id=…&promo=YYYY-MM-DD`) แล้วเทียบกับ `notifications` เดิมของผู้ใช้คนนั้น
+→ โปรฯ รอบใหม่แจ้งได้อีก แต่รอบเดิมแจ้งครั้งเดียว
 
 ### ตัวอย่างการไหลของ event: ผลสินเชื่อออก → ลูกค้าเห็นแจ้งเตือน (SSE push, poll เป็น fallback)
 
@@ -100,13 +114,17 @@ erDiagram
     users ||--o{ service_appointments : "นัด"
     users ||--o{ point_transactions : "สะสม/ใช้"
     users ||--o{ notifications : "ได้รับ"
+    users ||--o{ payments : "ชำระเงินจอง"
+    users ||--o{ watchlist_items : "ติดตาม"
     cars ||--o{ test_drives : ""
     cars ||--o{ reservations : ""
     cars ||--o{ reviews : ""
     cars ||--o{ service_appointments : ""
+    cars ||--o{ watchlist_items : "ถูกติดตาม"
     showrooms ||--o{ test_drives : "คิวทดลองขับ"
     showrooms ||--o{ service_appointments : "ศูนย์บริการ"
     reservations ||--o{ loans : "ยื่นได้ใหม่ถ้าไม่ผ่าน"
+    reservations ||--o| payments : "ออกใบจองหลังเงินเข้า"
     finance_plans ||--o{ loans : ""
 
     users {
@@ -142,6 +160,21 @@ erDiagram
         date price_locked_until
         string status
         string loan_id
+    }
+    payments {
+        string id PK
+        int user_id FK
+        string reservation_code FK
+        int amount
+        string method
+        string status
+        datetime expires_at
+    }
+    watchlist_items {
+        int id PK
+        int user_id FK
+        string car_id FK
+        datetime created_at
     }
     loans {
         string id PK

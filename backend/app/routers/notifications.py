@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import json
 import secrets
+from datetime import date as dt_date
 from datetime import datetime, timedelta
 
 import anyio
@@ -15,10 +16,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, func, select, update
 
+from ..crud import promo_status
 from ..data import POINTS_EARN
 from ..database import engine, get_session
 from ..events import subscribe
-from ..models import Notification, User
+from ..models import Car, Notification, User, WatchlistItem
 from ..security import get_current_user
 from .loans import settle_due_loans
 
@@ -38,6 +40,57 @@ def notify(db: Session, user_id: int | None, kind: str, title: str, message: str
 
 def _thai_date(day) -> str:
     return day.strftime("%d/%m/") + str(day.year + 543)
+
+
+# ---------- โปรโมชั่นของรถที่ติดตามใกล้หมดอายุ ----------
+# ทำไมอยู่ในไฟล์นี้ ไม่ใช่ watchlist.py:
+#   แจ้งเตือนชนิดนี้ไม่มี "ผู้กระทำ" มาจุดชนวน (ไม่มีใครกดอะไร) มันเกิดจากเวลาที่เดินไปเอง
+#   จึงใช้ event bus ไม่ได้ ต้องเช็คตอนผู้ใช้เข้ามาดูกล่องแจ้งเตือน ซึ่งเป็นงานของ Notification service
+#   อีกเหตุผลหนึ่งคือกันวงกลมของ import: watchlist.py จะต้อง import notify() จากไฟล์นี้
+#   ขณะที่ไฟล์นี้ต้อง import ตัวเช็คกลับไป — วางไว้ที่นี่ที่เดียวแล้ว watchlist.py ไม่ต้องรู้จักแจ้งเตือนเลย
+PROMO_LINK = "/pages/model.html?id={car_id}&promo={expires}"
+
+
+def check_promo_alerts(db: Session, user_id: int) -> int:
+    """สร้างแจ้งเตือน promo.ending ให้รถที่ผู้ใช้ติดตามและโปรฯ เหลือ ≤ 3 วัน — คืนจำนวนที่สร้างใหม่
+
+    ต้นทุนต่อการเรียก = 1 คิวรี join (จำกัดด้วย watchlist ของ user คนนี้เท่านั้น ใช้ index user_id)
+    ถ้าไม่ได้ติดตามอะไรเลยก็จบที่คิวรีแรกทันที จึงเรียกจาก endpoint ที่คนเข้าดูบ่อยได้
+
+    กันแจ้งซ้ำโดยไม่เพิ่มคอลัมน์: ใส่รหัสรถ + วันหมดอายุไว้ใน link ของแจ้งเตือน
+    (เช่น ?id=porsche-911&promo=2026-08-15) แล้วเทียบกับ link เดิมของ kind นี้
+    -> โปรฯ รอบใหม่ (วันหมดอายุใหม่) แจ้งได้อีกครั้ง แต่รอบเดิมแจ้งแค่ครั้งเดียว
+    """
+    rows = db.exec(
+        select(Car).join(WatchlistItem, WatchlistItem.car_id == Car.id)
+        .where(WatchlistItem.user_id == user_id)
+    ).all()
+    ending = [(car, promo_status(car)) for car in rows]
+    ending = [(car, promo) for car, promo in ending if promo and promo["ending_soon"]]
+    if not ending:
+        return 0
+
+    sent_links = set(db.exec(
+        select(Notification.link).where(
+            Notification.user_id == user_id, Notification.kind == "promo.ending"
+        )
+    ).all())
+
+    created = 0
+    for car, promo in ending:
+        link = PROMO_LINK.format(car_id=car.id, expires=promo["expires"])
+        if link in sent_links:
+            continue
+        left = promo["days_left"]
+        notify(db, user_id, "promo.ending", "โปรโมชั่นรุ่นที่คุณสนใจใกล้หมด",
+               f"{car.name}: {promo['title']} "
+               f"{'หมดวันนี้' if left == 0 else f'เหลืออีก {left} วัน'} "
+               f"(ถึง {_thai_date(dt_date.fromisoformat(promo['expires']))}) "
+               f"— วางเงินจองเพื่อล็อกโปรฯ นี้ไว้ได้ทันที", link)
+        created += 1
+    if created:
+        db.commit()
+    return created
 
 
 # ---------- event handlers ----------
@@ -154,7 +207,8 @@ def list_notifications(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_session),
 ):
-    settle_due_loans(db)   # ผลสินเชื่อที่ครบเวลาแล้วจะกลายเป็นแจ้งเตือนทันที
+    settle_due_loans(db)       # ผลสินเชื่อที่ครบเวลาแล้วจะกลายเป็นแจ้งเตือนทันที
+    check_promo_alerts(db, user.id)   # โปรฯ ของรถที่ติดตามใกล้หมด ต้องโผล่ในลิสต์รอบนี้เลย
     stmt = select(Notification).where(Notification.user_id == user.id)
     if unread_only:
         stmt = stmt.where(Notification.is_read == False)  # noqa: E712
@@ -173,6 +227,7 @@ def _unread_count(db: Session, user_id: int) -> int:
 @router.get("/unread-count", summary="จำนวนแจ้งเตือนที่ยังไม่อ่าน (fallback ตอนเปิดสตรีม SSE ไม่ได้ — poll ทุก 15 วินาที)")
 def unread_count(user: User = Depends(get_current_user), db: Session = Depends(get_session)):
     settle_due_loans(db)
+    check_promo_alerts(db, user.id)   # กระดิ่งต้องนับโปรฯ ใกล้หมดด้วย ไม่ใช่รอให้เปิดลิสต์ก่อน
     return {"unread": _unread_count(db, user.id)}
 
 
@@ -253,7 +308,8 @@ def _snapshot(user_id: int, after_id: int) -> tuple[list[dict], int, int]:
     ห้ามถือ Session ค้างไว้ทั้งสตรีม เพราะสตรีมอยู่นานเป็นนาที จะกิน connection pool จนหมด
     """
     with Session(engine) as db:
-        settle_due_loans(db)   # ผลสินเชื่อที่ครบเวลาแล้วต้องกลายเป็นแจ้งเตือนก่อนเช็ค
+        settle_due_loans(db)              # ผลสินเชื่อที่ครบเวลาแล้วต้องกลายเป็นแจ้งเตือนก่อนเช็ค
+        check_promo_alerts(db, user_id)   # รอบ tick ของสตรีมก็ถือเป็น "ผู้ใช้เข้ามาดู" อยู่แล้ว
         rows = db.exec(
             select(Notification)
             .where(Notification.user_id == user_id, Notification.id > after_id)

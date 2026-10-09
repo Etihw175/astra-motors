@@ -584,6 +584,10 @@ const ICONS = {
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
   alert:
     '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e06060" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  // หัวใจของ "รายการที่สนใจ" — เส้นขอบเปล่าตอนยังไม่ติดตาม ส่วนตอนติดตามแล้ว CSS จะทาสีข้างในให้
+  // (ใช้ SVG เส้นเดียวสองสถานะ จึงไม่ต้องสลับ markup ตอนกด — ปุ่มเดิมไม่ถูกสร้างใหม่ โฟกัสไม่หาย)
+  heart:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></svg>',
 };
 
 /* ---------- ตัวช่วยจัดรูปแบบ ---------- */
@@ -646,14 +650,23 @@ function monthlyPayment(principal, flatRate, months) {
 
 /* ---------- Toast ---------- */
 
-function toast(message, type = "info") {
+// link = { href, text } เพิ่มลิงก์ต่อท้ายข้อความ (เช่น ชวนเข้าสู่ระบบ) — สร้างเป็น element
+// ไม่ใช่ innerHTML เพราะข้อความอาจมีชื่อรุ่น/ข้อความจาก API ปนอยู่
+function toast(message, type = "info", link = null) {
   const zone = document.getElementById("toast-zone");
   if (!zone) return;
   const el = document.createElement("div");
   el.className = `toast ${type}`;
   el.textContent = message;
-  zone.appendChild(el);
-  setTimeout(() => el.remove(), 4200);
+  if (link) {
+    const a = document.createElement("a");
+    a.href = link.href;
+    a.textContent = link.text;
+    a.className = "toast-link";
+    el.append(" ", a);
+  }
+  // มีลิงก์ให้กดต้องอยู่นานพออ่านจบแล้วเอื้อมไปกด (4.2 วินาทีไม่พอ)
+  setTimeout(() => el.remove(), link ? 10000 : 4200);
 }
 
 /* ---------- localStorage (เก็บ config รถ + รหัสจองของผู้ใช้) ---------- */
@@ -678,6 +691,102 @@ const Store = {
 
 function qs(name) {
   return new URLSearchParams(location.search).get(name);
+}
+
+/* ---------- รายการที่สนใจ (watchlist): ปุ่มหัวใจที่ใช้ร่วมกันทุกหน้า ----------
+   เก็บรหัสที่ติดตามไว้ในหน่วยความจำของหน้า (Watch.ids) แล้วระบายสีปุ่มจากชุดนี้
+   -> หน้าแรกมีการ์ดหลายใบแต่ถาม API แค่ครั้งเดียว และกดสลับแล้วไม่ต้องโหลดใหม่ทั้งหน้า */
+
+const Watch = {
+  ids: new Set(),
+  // ยังไม่ล็อกอินก็ไม่ต้องยิง API (จะได้ 401 เปล่า ๆ แล้ว api.js จะล้าง token ทิ้ง)
+  async load() {
+    if (!Auth.isLoggedIn()) {
+      Watch.ids = new Set();
+      return Watch.ids;
+    }
+    try {
+      Watch.ids = new Set(await API.watchlistIds());
+    } catch {
+      Watch.ids = new Set();   // โหลดไม่ได้ก็แค่ยังไม่ระบายสีหัวใจ หน้าเว็บต้องใช้งานต่อได้
+    }
+    return Watch.ids;
+  },
+  has(carId) {
+    return Watch.ids.has(carId);
+  },
+};
+
+// labelled = true: ปุ่มเต็มความกว้างมีข้อความ (หน้ารายละเอียดรุ่น)
+// labelled = false: ปุ่มไอคอนบนการ์ด — ชื่อปุ่มมาจาก aria-label ที่บอกชื่อรุ่น
+function watchButtonHTML(car, { labelled = false } = {}) {
+  const on = Watch.has(car.id);
+  const name = esc(car.name);
+  const base = `type="button" class="watch-btn${labelled ? " labelled" : ""}" data-watch="${esc(car.id)}"
+      data-watch-name="${name}" aria-pressed="${on}"`;
+  // ข้อความที่เห็นต้องตรงกับชื่อที่สกรีนรีดเดอร์อ่าน (WCAG 2.5.3) จึงใช้ชื่อเดียวกันทั้งสองแบบ
+  return labelled
+    ? `<button ${base}>${ICONS.heart}<span class="txt">ติดตาม ${name}</span></button>`
+    : `<button ${base} aria-label="ติดตาม ${name}" title="ติดตาม ${name}">${ICONS.heart}</button>`;
+}
+
+function paintWatchButtons() {
+  document.querySelectorAll("[data-watch]").forEach((btn) => {
+    btn.setAttribute("aria-pressed", String(Watch.has(btn.dataset.watch)));
+  });
+}
+
+async function toggleWatch(btn, onChange) {
+  const carId = btn.dataset.watch;
+  const name = btn.dataset.watchName || "รุ่นนี้";
+  if (!Auth.isLoggedIn()) {
+    // ไม่เด้งหน้าทันที: ผู้ใช้กำลังดูรถอยู่ บอกก่อนแล้วให้เขาเลือกเองว่าจะไปล็อกอินไหม
+    const next = encodeURIComponent(`${location.pathname}${location.search}`);
+    toast(`เข้าสู่ระบบเพื่อเก็บ ${name} ไว้ในรายการที่สนใจ แล้วรับแจ้งเตือนเมื่อโปรโมชั่นใกล้หมด`, "info", {
+      href: `/pages/login.html?next=${next}`,
+      text: "เข้าสู่ระบบ",
+    });
+    return;
+  }
+  const on = btn.getAttribute("aria-pressed") === "true";
+  btn.disabled = true;
+  try {
+    if (on) {
+      await API.unwatchCar(carId);
+      Watch.ids.delete(carId);
+    } else {
+      await API.watchCar(carId);
+      Watch.ids.add(carId);
+    }
+    paintWatchButtons();
+    // toast-zone เป็น aria-live="polite" อยู่แล้ว การเปลี่ยนสถานะจึงถูกประกาศให้สกรีนรีดเดอร์
+    toast(
+      on
+        ? `เอา ${name} ออกจากรายการที่สนใจแล้ว`
+        : `เพิ่ม ${name} ในรายการที่สนใจแล้ว — ระบบจะเตือนเมื่อโปรโมชั่นเหลือไม่เกิน 3 วัน`,
+      "ok"
+    );
+    if (onChange) onChange(carId, !on);
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function bindWatchButtons(zone, onChange) {
+  if (!zone) return;
+  zone.querySelectorAll("[data-watch]").forEach((btn) =>
+    btn.addEventListener("click", () => toggleWatch(btn, onChange))
+  );
+}
+
+// ป้ายบอกสถานะโปรฯ ของรถที่ติดตาม (ข้อมูลมาจาก promo_status ฝั่ง backend)
+function promoBadge(promo) {
+  if (!promo) return '<span class="badge badge-bad">ไม่มีโปรโมชั่น</span>';
+  if (!promo.active) return '<span class="badge badge-bad">โปรโมชั่นหมดอายุแล้ว</span>';
+  const label = promo.days_left === 0 ? "โปรฯ หมดวันนี้" : `โปรฯ เหลือ ${promo.days_left} วัน`;
+  return `<span class="badge ${promo.ending_soon ? "badge-warn" : "badge-accent"}">${label}</span>`;
 }
 
 /* ---------- รีวิว: การ์ด + ฟอร์ม (ใช้ร่วมกันหน้าแรก / รายละเอียดรุ่น / หลังการขาย) ---------- */

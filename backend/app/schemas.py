@@ -133,6 +133,12 @@ class SimulationCreate(BaseModel):
     fuel_price: float = Field(41.5, gt=0, le=100, description="ราคาน้ำมันต่อลิตร (บาท)")
 
 
+# ---------- รายการที่สนใจ (watchlist) ----------
+
+class WatchlistCreate(BaseModel):
+    car_id: str = Field(..., description="รหัสรุ่นรถที่ต้องการติดตาม")
+
+
 # ---------- บริการหลังการขาย ----------
 
 class ReviewCreate(BaseModel):

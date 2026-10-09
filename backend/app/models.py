@@ -67,6 +67,22 @@ class Car(SQLModel, table=True):
     road: Optional[dict] = Field(default=None, sa_column=Column(JSON))
 
 
+class WatchlistItem(SQLModel, table=True):
+    """รายการรถที่ลูกค้า "สนใจ" แต่ยังไม่พร้อมซื้อ (journey ขั้นที่ 1-2)
+
+    อยู่ในกลุ่ม Catalog service เพราะเป็นความสัมพันธ์ระหว่างผู้ใช้กับ "รุ่นรถในแคตตาล็อก"
+    ไม่ใช่คำสั่งซื้อ — ไม่มีราคา/สเปคติดมาเหมือน reservations
+    unique (user_id, car_id): ปุ่มหัวใจกดสลับไปมา กดรัว ๆ ก็ต้องมีได้แถวเดียวต่อรุ่น
+    """
+    __tablename__ = "watchlist_items"
+    __table_args__ = (UniqueConstraint("user_id", "car_id", name="uq_watchlist_user_car"),)
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    car_id: str = Field(foreign_key="cars.id", index=True)
+    created_at: dt.datetime = Field(default_factory=now)
+
+
 class Showroom(SQLModel, table=True):
     __tablename__ = "showrooms"
 

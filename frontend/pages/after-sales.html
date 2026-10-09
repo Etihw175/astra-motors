@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=14">
+  <link rel="stylesheet" href="/css/style.css?v=15">
 </head>
 <body>
   <main class="section" id="main-content" tabindex="-1">
@@ -22,6 +22,7 @@
         <button type="button" class="active" data-tab="points" role="tab" aria-selected="true">คะแนนสะสม</button>
         <button type="button" data-tab="service" role="tab" aria-selected="false">นัดเข้าศูนย์บริการ</button>
         <button type="button" data-tab="reviews" role="tab" aria-selected="false">รีวิวของฉัน</button>
+        <button type="button" data-tab="watchlist" role="tab" aria-selected="false">รายการที่สนใจ</button>
       </div>
 
       <!-- ===== คะแนนสะสม ===== -->
@@ -111,12 +112,19 @@
           </div>
         </div>
       </section>
+
+      <!-- ===== รายการที่สนใจ (journey ขั้นที่ 1-2: คนที่ยังไม่พร้อมซื้อจะได้กลับมา) ===== -->
+      <section data-panel="watchlist" role="tabpanel" class="hidden">
+        <h2 class="sr-only">รายการที่สนใจ</h2>
+        <p class="muted">รุ่นที่คุณกดปุ่มหัวใจไว้ — ระบบจะแจ้งเตือนให้เมื่อโปรโมชั่นของรุ่นนั้นเหลือไม่เกิน 3 วัน</p>
+        <div class="grid grid-3 mt-2" id="wl-grid" aria-live="polite"></div>
+      </section>
     </div>
   </main>
 
-  <script src="/js/api.js?v=14"></script>
-  <script src="/js/ui.js?v=14"></script>
-  <script src="/js/fx.js?v=14"></script>
-  <script src="/js/after-sales.js?v=14"></script>
+  <script src="/js/api.js?v=15"></script>
+  <script src="/js/ui.js?v=15"></script>
+  <script src="/js/fx.js?v=15"></script>
+  <script src="/js/after-sales.js?v=15"></script>
 </body>
 </html>

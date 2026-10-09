@@ -1260,3 +1260,58 @@ body.modal-open { overflow: hidden; }
   .pager .pages button { min-width: 44px; }
   .link-btn { display: inline-flex; align-items: center; }
 }
+
+/* =========================================================
+   รายการที่สนใจ (watchlist) — ปุ่มหัวใจ + การ์ดในหน้าหลังการขาย
+   ========================================================= */
+
+/* ปุ่มหัวใจลอยมุมบนขวาของภาพรถ: เป้าแตะ 44px ตาม WCAG 2.5.8 แม้ไอคอนจะเล็กกว่านั้น */
+.watch-btn {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--field-border);
+  background: rgba(13, 17, 23, 0.72);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.watch-btn:hover { color: var(--accent-strong); border-color: var(--accent); }
+/* ติดตามแล้ว: ทาสีข้างในหัวใจ (CSS ชนะ fill="none" ที่ติดมากับ SVG) ไม่ได้บอกสถานะด้วยสีเพียงอย่างเดียว
+   เพราะ aria-pressed บอกสถานะให้สกรีนรีดเดอร์อยู่แล้ว และรูปทรงหัวใจทึบ/โปร่งก็ต่างกันชัด */
+.watch-btn[aria-pressed="true"] { color: var(--accent-strong); border-color: var(--accent); }
+.watch-btn[aria-pressed="true"] svg { fill: var(--accent); }
+.watch-btn:disabled { opacity: 0.5; cursor: progress; }
+
+/* แบบมีข้อความ (หน้ารายละเอียดรุ่น) — เต็มความกว้างเหมือนปุ่ม CTA อื่นในการ์ดเดียวกัน */
+.watch-btn.labelled {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+}
+.watch-btn.labelled .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* การ์ดรถใน .visual เป็น position: relative อยู่แล้ว (.car-card) — วางหัวใจซ้อนมุมขวาบน */
+.car-card .visual { position: relative; }
+.car-card .visual .watch-btn { position: absolute; top: 12px; right: 12px; z-index: 2; }
+
+/* ปุ่มกรอง "เฉพาะที่ฉันติดตาม" ให้ไปอยู่ชิดกับปุ่มล้างตัวกรองทางขวา */
+.filter-meta .watch-filter { margin-left: auto; font-family: var(--font-body); gap: 8px; }
+.filter-meta .watch-filter[aria-pressed="true"] svg { fill: currentColor; }
+
+/* การ์ดรุ่นที่สนใจในหน้าหลังการขาย */
+.wl-card .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.wl-card h3 { font-size: 19px; margin-top: 8px; }
+.wl-card .price { color: var(--accent-strong); font-size: 20px; font-weight: 600; margin-top: 6px; }
+.wl-card .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--space-2); }

@@ -8,6 +8,10 @@ const HERO_COLOR = "#C8102E"; // แดง Rosso Corsa — สีซูเปอ
 const BUDGETS = [12_000_000, 15_000_000, 20_000_000, 25_000_000];
 
 let filterTimer = null;
+// ผลค้นหาล่าสุดจาก /api/cars — เก็บไว้ให้ตัวกรอง "เฉพาะที่ฉันติดตาม" ทำงานฝั่ง client
+// (ตัวกรองนี้เป็นข้อมูลส่วนตัวของผู้ใช้ จึงไม่ยัดเข้า /api/cars ที่เป็น endpoint สาธารณะ)
+let lastCars = [];
+let searchActive = false;   // มีตัวกรองจากฝั่งเซิร์ฟเวอร์อยู่ไหม — ใช้เลือกข้อความสรุปจำนวน
 
 /* ---------- hero: ใช้ข้อมูลรุ่นท็อปจริงจาก API ---------- */
 
@@ -100,7 +104,8 @@ function renderCars(cars) {
       const defaultColor = car.colors.find((c) => c.extra === 0) || car.colors[0];
       return `
       <article class="car-card rise" style="animation-delay:${i * 90}ms">
-        <div class="visual">${carVisual3D(car.id, defaultColor.hex)}</div>
+        <div class="visual">${carVisual3D(car.id, defaultColor.hex)}
+          ${watchButtonHTML(car)}</div>
         <div class="body">
           ${stars(car.rating.avg, car.rating.count)}
           <h3>${car.name}</h3>
@@ -115,21 +120,47 @@ function renderCars(cars) {
     })
     .join("");
   initCarVisuals();
+  // กดเอาออกจากรายการขณะเปิดตัวกรอง "เฉพาะที่ฉันติดตาม" -> การ์ดต้องหายไปทันที จึงวาดใหม่
+  bindWatchButtons(grid, () => {
+    if (document.getElementById("f-watched").getAttribute("aria-pressed") === "true") applyFilters();
+  });
   if (window.FX) FX.bindCardFX(grid);
+}
+
+/* ---------- ตัวกรอง "เฉพาะที่ฉันติดตาม" (ทำฝั่ง client จาก /api/watchlist/ids) ---------- */
+
+function watchedOnly() {
+  return document.getElementById("f-watched").getAttribute("aria-pressed") === "true";
+}
+
+function applyFilters() {
+  const list = watchedOnly() ? lastCars.filter((c) => Watch.has(c.id)) : lastCars;
+  const zone = document.getElementById("filter-count");
+  if (watchedOnly() && !list.length) {
+    document.getElementById("car-grid").setAttribute("aria-busy", "false");
+    document.getElementById("car-grid").innerHTML = `<div class="card text-center muted" style="grid-column:1/-1">
+      ยังไม่มีรุ่นที่คุณติดตาม — กดปุ่มหัวใจบนการ์ดรถเพื่อเก็บไว้ดูภายหลัง
+      แล้วระบบจะเตือนเมื่อโปรโมชั่นใกล้หมด</div>`;
+    zone.textContent = "ยังไม่มีรุ่นที่ติดตาม";
+    return;
+  }
+  renderCars(list);
+  zone.textContent = watchedOnly()
+    ? `ที่ฉันติดตาม ${list.length} รุ่น`
+    : searchActive
+      ? `พบ ${list.length} รุ่นที่ตรงเงื่อนไข`
+      : `ทั้งหมด ${list.length} รุ่น`;
 }
 
 async function searchCars() {
   const grid = document.getElementById("car-grid");
   const filters = currentFilters();
-  const active = Boolean(filters.q || filters.brand || filters.drive || filters.max_price);
-  document.getElementById("filter-reset").classList.toggle("hidden", !active);
+  searchActive = Boolean(filters.q || filters.brand || filters.drive || filters.max_price);
+  document.getElementById("filter-reset").classList.toggle("hidden", !(searchActive || watchedOnly()));
   grid.setAttribute("aria-busy", "true");
   try {
-    const cars = await API.cars(filters);
-    document.getElementById("filter-count").textContent = active
-      ? `พบ ${cars.length} รุ่นที่ตรงเงื่อนไข`
-      : `ทั้งหมด ${cars.length} รุ่น`;
-    renderCars(cars);
+    lastCars = await API.cars(filters);
+    applyFilters();
   } catch (err) {
     grid.innerHTML = `<p class="muted">${esc(err.message)}</p>`;
   }
@@ -159,7 +190,27 @@ async function initFilters() {
   });
   document.getElementById("filter-reset").addEventListener("click", () => {
     form.reset();
+    setWatchedFilter(false);
     searchCars();
+  });
+}
+
+// ปุ่มสลับ "เฉพาะที่ฉันติดตาม" — เป็น <button aria-pressed> จริง กดด้วยคีย์บอร์ดได้เหมือนปุ่มอื่น
+function setWatchedFilter(on) {
+  const btn = document.getElementById("f-watched");
+  btn.setAttribute("aria-pressed", String(on));
+  btn.classList.toggle("selected", on);
+}
+
+function initWatchFilter() {
+  const btn = document.getElementById("f-watched");
+  btn.innerHTML = `${ICONS.heart}<span>เฉพาะที่ฉันติดตาม</span>`;
+  // ยังไม่ล็อกอินก็ยังไม่มีรายการให้กรอง — ซ่อนไว้ไม่ให้กดแล้วเจอผลลัพธ์ว่างเปล่าแบบไม่มีเหตุผล
+  btn.classList.toggle("hidden", !Auth.isLoggedIn());
+  btn.addEventListener("click", () => {
+    setWatchedFilter(btn.getAttribute("aria-pressed") !== "true");
+    document.getElementById("filter-reset").classList.remove("hidden");
+    applyFilters();
   });
 }
 
@@ -185,11 +236,13 @@ async function initHome() {
   initCarVisuals();
   skeleton(document.getElementById("car-grid"));
 
+  initWatchFilter();
   try {
-    const cars = await API.cars();
+    // โหลดรายการที่ติดตามก่อนวาดการ์ด ปุ่มหัวใจจึงขึ้นสถานะถูกต้องตั้งแต่เฟรมแรก (ไม่กระพริบ)
+    const [cars] = await Promise.all([API.cars(), Watch.load()]);
+    lastCars = cars;
     renderHero(cars);
-    renderCars(cars);
-    document.getElementById("filter-count").textContent = `ทั้งหมด ${cars.length} รุ่น`;
+    applyFilters();
   } catch (err) {
     document.getElementById("car-grid").innerHTML = `<p class="muted">${esc(err.message)}</p>`;
   }

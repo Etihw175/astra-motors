@@ -168,6 +168,16 @@ function renderSpecs() {
     .join("");
 }
 
+/* ---------- รายการที่สนใจ ---------- */
+
+// ปุ่มแบบมีข้อความ (ไม่ใช่ไอคอนลอย) เพราะอยู่ในกลุ่ม CTA ของหน้านี้ ต้องอ่านออกว่ากดแล้วได้อะไร
+async function renderWatchButton() {
+  await Watch.load();
+  const zone = document.getElementById("watch-zone");
+  zone.innerHTML = watchButtonHTML(car, { labelled: true });
+  bindWatchButtons(zone);
+}
+
 /* ---------- รีวิวรุ่นนี้ ---------- */
 
 async function renderReviewSection() {
@@ -244,6 +254,7 @@ async function initModel() {
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("detail").classList.remove("hidden");
   renderReviewSection().catch(() => null);
+  renderWatchButton().catch(() => null);
 }
 
 // ถ้ามีข้อผิดพลาดที่ไม่คาดคิด ให้แสดงข้อความแทนการค้างที่ "กำลังโหลด"

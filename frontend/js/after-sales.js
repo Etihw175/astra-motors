@@ -282,12 +282,68 @@ async function renderReviewTab() {
   );
 }
 
+/* ---------- รายการที่สนใจ ---------- */
+
+async function renderWatchlist() {
+  const grid = document.getElementById("wl-grid");
+  let items;
+  try {
+    items = await API.watchlist();
+  } catch (err) {
+    grid.innerHTML = `<p class="muted">${esc(err.message)}</p>`;
+    return;
+  }
+  // ซิงก์ชุดรหัสที่ติดตามไว้ด้วย เพื่อให้ปุ่ม "เอาออก" ของการ์ดสะท้อนสถานะจริง
+  Watch.ids = new Set(items.map((w) => w.car.id));
+  if (!items.length) {
+    grid.innerHTML = `<div class="card muted" style="grid-column:1/-1">
+      ยังไม่มีรุ่นที่สนใจ — กดปุ่มหัวใจบนการ์ดรถที่<a href="/"> หน้าแรก</a>
+      หรือในหน้ารายละเอียดรุ่น เพื่อเก็บไว้ดูภายหลัง</div>`;
+    return;
+  }
+  grid.innerHTML = items
+    .map(
+      (w) => `
+      <article class="card wl-card">
+        <div class="head">
+          ${stars(w.car.rating.avg, w.car.rating.count)}
+          ${promoBadge(w.promotion)}
+        </div>
+        <h3>${esc(w.car.name)}</h3>
+        <p class="muted small">${esc(w.car.tagline)}</p>
+        <p class="price num">${baht(w.car.price)}</p>
+        ${w.promotion && w.promotion.active ? `<p class="small">${esc(w.promotion.title)}</p>` : ""}
+        <div class="actions">
+          <a class="btn btn-primary btn-sm" href="/pages/model.html?id=${encodeURIComponent(w.car.id)}">ดูรายละเอียด</a>
+          <a class="btn btn-ghost btn-sm" href="/pages/test-drive.html?car=${encodeURIComponent(w.car.id)}">จองทดลองขับ</a>
+          <button type="button" class="btn btn-ghost btn-sm" data-unwatch="${esc(w.car.id)}"
+                  aria-label="เอา ${esc(w.car.name)} ออกจากรายการที่สนใจ">เอาออก</button>
+        </div>
+      </article>`
+    )
+    .join("");
+  grid.querySelectorAll("[data-unwatch]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        await API.unwatchCar(btn.dataset.unwatch);
+        Watch.ids.delete(btn.dataset.unwatch);
+        toast("เอาออกจากรายการที่สนใจแล้ว", "ok");
+        renderWatchlist();
+      } catch (err) {
+        toast(err.message, "error");
+        btn.disabled = false;
+      }
+    })
+  );
+}
+
 /* ---------- เริ่มต้น ---------- */
 
 async function initAfterSales() {
   if (!Auth.isLoggedIn()) return;
   const tab = location.hash.slice(1);
-  if (["points", "service", "reviews"].includes(tab)) openTab(tab);
+  if (["points", "service", "reviews", "watchlist"].includes(tab)) openTab(tab);
 
   try {
     const [carList, mine] = await Promise.all([API.cars(), API.myBookings()]);
@@ -302,6 +358,7 @@ async function initAfterSales() {
   renderLoyalty();
   initService().catch((err) => toast(err.message, "error"));
   renderReviewTab().catch((err) => toast(err.message, "error"));
+  renderWatchlist();
 }
 
 initAfterSales();

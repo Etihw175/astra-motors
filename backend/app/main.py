@@ -22,6 +22,7 @@ from .routers import (
     showrooms,
     simulation,
     users,
+    watchlist,
 )
 
 app = FastAPI(
@@ -39,6 +40,7 @@ init_db()
 for module in (
     auth, users,                    # Identity service
     cars, showrooms, finance,       # Catalog service
+    watchlist,                      # Catalog service (รายการที่สนใจ — ต้องล็อกอิน)
     bookings,                       # Booking + Order service
     payments,                       # Payment service (จ่ายเงินจองก่อนออกใบจอง)
     loans, documents,               # Finance service

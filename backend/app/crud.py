@@ -1,6 +1,7 @@
 # ตัวช่วยอ่านข้อมูลที่หลาย router ใช้ร่วมกัน + แปลง row ของฐานข้อมูลเป็น JSON ที่ frontend ใช้
 # (รูปแบบ JSON คงเดิมตั้งแต่ยุค mock data — frontend จึงไม่ต้องแก้ตอนย้ายลงฐานข้อมูล)
 import secrets
+from datetime import date as date_cls
 from datetime import datetime
 
 from fastapi import HTTPException
@@ -47,6 +48,30 @@ def rating_map(db: Session) -> dict[str, dict]:
         select(Review.car_id, func.avg(Review.rating), func.count(Review.id)).group_by(Review.car_id)
     ).all()
     return {car_id: {"avg": round(float(avg), 1), "count": count} for car_id, avg, count in rows}
+
+
+# โปรฯ ที่เหลือไม่เกินกี่วันถือว่า "ใกล้หมด" — ใช้ทั้งหน้ารายการที่สนใจและตัวแจ้งเตือน
+PROMO_ENDING_DAYS = 3
+
+
+def promo_status(car: Car, today: date_cls | None = None) -> dict | None:
+    """สถานะโปรโมชั่นของรถ 1 คัน (เหลือกี่วัน / หมดอายุแล้ว) — คืน None ถ้ารุ่นนี้ไม่มีโปรฯ
+
+    อยู่ใน crud.py เพราะใช้ร่วมกัน 2 ที่: หน้ารายการที่สนใจ และตัวสร้างแจ้งเตือนโปรฯ ใกล้หมด
+    กติกาเรื่องวันจึงมีที่เดียว ไม่ต้องคอยซิงก์ให้ตรงกัน
+    """
+    if not car.promotion:
+        return None
+    expires = date_cls.fromisoformat(car.promotion["expires"])
+    days_left = (expires - (today or date_cls.today())).days
+    return {
+        "title": car.promotion["title"],
+        "expires": car.promotion["expires"],
+        # หมดอายุแล้วให้เป็น 0 ไม่ใช่ติดลบ — หน้าเว็บจะได้ไม่ต้องเช็คเครื่องหมายเอง
+        "days_left": max(days_left, 0),
+        "active": days_left >= 0,
+        "ending_soon": 0 <= days_left <= PROMO_ENDING_DAYS,
+    }
 
 
 def car_dict(car: Car, ratings: dict | None = None) -> dict:

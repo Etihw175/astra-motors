@@ -107,6 +107,13 @@ const API = {
     return _api("/api/documents", { method: "POST", body: form });
   },
 
+  /* ---------- รายการที่สนใจ (watchlist) — ต้องล็อกอิน ---------- */
+  watchlist: () => _api("/api/watchlist"),
+  // ขอแค่รหัสรถในคิวรีเดียว ไว้ระบายสีปุ่มหัวใจบนการ์ดทุกใบในหน้าแรก
+  watchlistIds: () => _api("/api/watchlist/ids"),
+  watchCar: (carId) => _api("/api/watchlist", { method: "POST", body: JSON.stringify({ car_id: carId }) }),
+  unwatchCar: (carId) => _api(`/api/watchlist/${encodeURIComponent(carId)}`, { method: "DELETE" }),
+
   /* ---------- แจ้งเตือน (ติดตามสถานะ) ---------- */
   notifications: (limit = 15) => _api(`/api/notifications?limit=${limit}`),
   unreadCount: () => _api("/api/notifications/unread-count"),
