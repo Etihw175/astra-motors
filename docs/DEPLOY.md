@@ -2,7 +2,7 @@
 
 > **หมายเหตุ:** ยังไม่ได้ deploy จริง เพราะยังไม่มีบัญชี Render ของนิสิต
 > เอกสารนี้คือขั้นตอนที่ต้องทำ — ไฟล์ตั้งค่าทั้งหมด (`render.yaml`, `backend/Dockerfile`,
-> `.dockerignore`) พร้อมอยู่ใน repo แล้ว กดตามทีละขั้นได้เลย
+> `.dockerignore`) พร้อมอยู่ใน repo แล้ว
 
 Repo: <https://github.com/Etihw175/astra-motors>
 

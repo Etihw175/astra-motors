@@ -77,10 +77,10 @@ sequenceDiagram
     Note over B,G: สตรีมพัง/เบราว์เซอร์ไม่รองรับ EventSource → fallback ไป poll /unread-count ทุก 15 วินาที
 ```
 
-### สถานะการแยก service (ตรงไปตรงมา)
+### สถานะการแยก service
 
 ตอนนี้ deploy แบบ **modular monolith** — ทุก service รันใน process/container เดียว (`web`) คู่กับ `db`
-แต่ขอบเขตของแต่ละ service ถูกแยกไว้แล้วครบ 3 ชั้น จึงแยกออกเป็น container ละ service ได้เมื่อจำเป็น:
+แต่แยกขอบเขตของแต่ละ service ไว้แล้วครบ 3 ชั้น จึงแยกออกเป็น container ละ service ได้เมื่อจำเป็น:
 
 1. **API แยก** — แต่ละ service มี router และ prefix ของตัวเอง → API Gateway (เช่น Nginx/Traefik) route ตาม prefix ได้ทันที
 2. **ข้อมูลแยก** — แต่ละตารางมีเจ้าของ service เดียว (service อื่นอ่านผ่าน helper ใน `crud.py`)
@@ -95,11 +95,11 @@ sequenceDiagram
 
 | ชั้น | เทคโนโลยี | ใช้ทำอะไร |
 |---|---|---|
-| Presentation | HTML5, CSS3, JavaScript (ES2020, ไม่มี framework/build step), `<model-viewer>` 3.5, Google Fonts | 13 หน้าตาม journey, โมเดล 3D หมุน 360°, เรียก API ด้วย `fetch()` |
+| Presentation | HTML5, CSS3, JavaScript (ES2020, ไม่มี framework/build step), `<model-viewer>` 3.5, Google Fonts | 14 หน้าตาม journey, โมเดล 3D หมุน 360°, เรียก API ด้วย `fetch()` |
 | API / Application | FastAPI 0.115, Uvicorn 0.32, Pydantic v2, OpenAPI/Swagger UI, python-multipart | REST API + serve หน้าเว็บ, validate ข้อมูล, เอกสาร API ที่ `/docs`, อัปโหลดไฟล์ |
 | Business logic | 10 service routers, Event bus, PBKDF2-SHA256 + Bearer token + RBAC | กติกาทางธุรกิจ, สิทธิ์การเข้าถึง, แจ้งเตือน/คะแนนแบบ event-driven |
 | Data | SQLModel 0.0.22, SQLAlchemy 2.0, psycopg 3, PostgreSQL 16, SQLite | ORM + ฐานข้อมูลหลัก (Docker) + ฐานข้อมูลตอนพัฒนา/เทสต์ |
-| DevOps | Docker, Docker Compose, Git/GitHub, pytest + httpx, Render/Railway | รันทั้งระบบด้วยคำสั่งเดียว, เทสต์อัตโนมัติ 41 เคส, deploy ด้วย Dockerfile เดิม |
+| DevOps | Docker, Docker Compose, Git/GitHub, pytest + httpx, Render/Railway | รันทั้งระบบด้วยคำสั่งเดียว, เทสต์อัตโนมัติ 79 เคส, deploy ด้วย Dockerfile เดิม |
 
 ## 3. โครงสร้างข้อมูล (ER diagram)
 

@@ -11,6 +11,8 @@
 - **Stack:** FastAPI (Python) + HTML/CSS/JavaScript ธรรมดา + PostgreSQL (SQLModel) + Docker Compose
 - **สถาปัตยกรรม:** [Microservices architecture + Technology stack + ER diagram](docs/ARCHITECTURE.md)
 - **ความคืบหน้า:** [รายงาน integration + ประเมินตนเอง](docs/PROGRESS.md)
+- **Deploy:** [คู่มือขึ้น Render ทีละขั้น](docs/DEPLOY.md) · **ทดสอบกับผู้ใช้:** [แผน usability test](docs/USABILITY-TEST.md)
+  · **การเข้าถึง:** [สรุป accessibility](docs/ACCESSIBILITY.md)
 
 ![Microservices architecture](docs/architecture/microservices-architecture.png)
 
@@ -44,12 +46,13 @@ cd backend && uvicorn app.main:app --reload
 | ขั้นตอน | หน้าจอ | ไฟล์ |
 |---|---|---|
 | 1. รับรู้ | โปรโมชั่นที่ยังใช้ได้ + รีวิวล่าสุดจากสมาชิก | `frontend/index.html` |
-| 2. ค้นหารถ | ค้นหา + กรองยี่ห้อ/ระบบขับเคลื่อน/งบ + เรียงลำดับ | `frontend/index.html` |
+| 2. ค้นหารถ | ค้นหา + กรองยี่ห้อ/ระบบขับเคลื่อน/งบ + เรียงลำดับ + ติดตามรุ่นที่สนใจ | `frontend/index.html` |
 | 3. ดูรายละเอียด | โมเดล 3D หมุน 360°, เลือกสี/ออปชัน, เทียบรุ่น, คำนวณไฟแนนซ์, จำลองถนนไทย, รีวิวรายรุ่น | `model.html`, `compare.html`, `finance.html`, `thai-road.html` |
 | 4. จองทดลองขับ | เลือกโชว์รูม + คิวว่างเรียลไทม์จากการจองจริง | `frontend/pages/test-drive.html` |
-| 5. ซื้อรถออนไลน์ | วางเงินจอง (จำลอง) ล็อกราคา + อัปโหลดเอกสาร + ยื่นสินเชื่อ | `reserve.html`, `loan.html` |
-| 6. ติดตามสถานะ | การจองทั้งหมดของบัญชี + stepper + ผลสินเชื่อเรียลไทม์ + กระดิ่งแจ้งเตือน | `frontend/pages/status.html` |
-| 7. หลังการขาย | คะแนนสะสม/แลกรางวัล, นัดเข้าศูนย์บริการ, รีวิว | `frontend/pages/after-sales.html` |
+| 5. ซื้อรถออนไลน์ | ชำระเงินจองด้วย QR พร้อมเพย์ (จำลอง) ล็อกราคา + อัปโหลดเอกสาร + ยื่นสินเชื่อ | `reserve.html`, `loan.html` |
+| 6. ติดตามสถานะ | การจองทั้งหมดของบัญชี + stepper + ผลสินเชื่อ + แจ้งเตือนเรียลไทม์ผ่าน SSE | `frontend/pages/status.html` |
+| 7. หลังการขาย | คะแนนสะสม/แลกรางวัล, นัดเข้าศูนย์บริการ, รีวิว, รายการที่สนใจ | `frontend/pages/after-sales.html` |
+| สำหรับพนักงาน | หลังบ้าน: ตัวเลขสรุป คิวทดลองขับ ใบจอง สินเชื่อ นัดศูนย์ ปิดงานได้ | `frontend/pages/admin.html` |
 | ทุกขั้นตอน — บัญชีสมาชิก | สมัคร/เข้าสู่ระบบ/แก้ข้อมูล + หน้าจัดการผู้ใช้ของ admin | `register.html`, `login.html`, `profile.html` |
 
 Edge cases ที่รองรับแล้ว: สินเชื่อไม่ผ่าน (คำนวณทางเลือก + ยื่นใหม่ได้), สี/รุ่นรอผลิต, ยกเลิกใบจอง+เงื่อนไขคืนเงิน,
@@ -72,7 +75,8 @@ backend/
     security.py        # แฮชรหัสผ่าน (PBKDF2) + session token + ตรวจสิทธิ์
     routers/           # 1 ไฟล์ต่อ service: auth, users, cars, showrooms, finance, bookings,
                        # loans, documents, notifications, reviews, after_sales, simulation
-  tests/               # pytest 41 เคส: auth + สิทธิ์ + ครบ 7 ขั้นตอนของ journey
+  alembic/             # migration คุมโครงสร้างตาราง (3 รุ่น)
+  tests/               # pytest 79 เคส: auth + สิทธิ์ + ครบ 7 ขั้นตอน + payment + watchlist + migration
   requirements.txt
   requirements-dev.txt # แพ็กเกจสำหรับรันเทสต์เท่านั้น
   Dockerfile           # build context = root ของ repo (สำคัญตอน deploy)
@@ -86,6 +90,10 @@ docs/
   architecture/        # ไฟล์แผนภาพ .svg / .png
   user-journey.md      # journey → หน้าจอ → API
   PROGRESS.md          # ส่วนที่เสร็จ/ยังไม่เสร็จ + ประเมินตนเอง
+  DEPLOY.md            # ขั้นตอน deploy ขึ้น Render/Railway
+  USABILITY-TEST.md    # แผนทดสอบกับผู้ใช้จริง 5 คน
+  ACCESSIBILITY.md     # สิ่งที่แก้เรื่องการเข้าถึง + วิธีตรวจซ้ำ
+render.yaml            # Render Blueprint (web + managed PostgreSQL)
 docker-compose.yml     # web (FastAPI) + db (PostgreSQL 16)
 ```
 
@@ -116,11 +124,15 @@ PBKDF2-HMAC-SHA256 120,000 รอบ พร้อม salt รายบัญช�
 - `GET /api/showrooms`, `GET /api/showrooms/{id}/slots?date=` — โชว์รูม + คิวว่างเรียลไทม์
 - `POST /api/testdrives`, `POST /api/testdrives/{code}/cancel` — จอง/ยกเลิกทดลองขับ (guest ได้)
 - `GET /api/finance/plans` — แผนสินเชื่อ
+- `POST /api/payments`, `GET /api/payments/{id}`, `POST /api/payments/{id}/confirm` — ชำระเงินจอง (QR พร้อมเพย์จำลอง) แล้วออกใบจองให้อัตโนมัติ
 - `POST /api/reservations`, `POST /api/reservations/{code}/cancel`, `POST /api/reservations/{code}/delivery` — ต้องล็อกอิน
 - `POST /api/documents` — อัปโหลดเอกสาร PDF/JPG/PNG ≤ 5 MB
 - `POST /api/loans`, `GET /api/loans/{id}` — ยื่น/ติดตามสินเชื่อ (ผลออกใน ~20 วินาที)
 - `GET /api/me/bookings` — การจองทั้งหมดของบัญชี (ทดลองขับ + ใบจอง + สินเชื่อ + นัดศูนย์)
 - `GET /api/notifications`, `GET /api/notifications/unread-count`, `POST /api/notifications/read-all` — แจ้งเตือน
+- `POST /api/notifications/stream-ticket` + `GET /api/notifications/stream` — แจ้งเตือนเรียลไทม์ (SSE)
+- `GET/POST /api/watchlist`, `DELETE /api/watchlist/{car_id}` — รุ่นที่ติดตาม + เตือนโปรฯ ใกล้หมด
+- `GET /api/admin/overview` และรายการต่าง ๆ ใต้ `/api/admin/*` — หลังบ้านพนักงาน (เฉพาะ admin)
 - `GET/POST /api/reviews`, `GET /api/reviews/mine`, `DELETE /api/reviews/{id}` — รีวิว
 - `GET /api/service/types`, `GET /api/service/slots`, `POST/GET /api/service/appointments` — นัดเข้าศูนย์บริการ
 - `GET /api/loyalty`, `POST /api/loyalty/redeem` — คะแนนสะสม + แลกของรางวัล
@@ -130,7 +142,7 @@ PBKDF2-HMAC-SHA256 120,000 รอบ พร้อม salt รายบัญช�
 
 ```bash
 pip install -r backend/requirements-dev.txt
-cd backend && pytest -q      # 41 เคส (ใช้ SQLite ชั่วคราว ไม่แตะข้อมูลจริง)
+cd backend && pytest -q      # 79 เคส (ใช้ SQLite ชั่วคราว ไม่แตะข้อมูลจริง)
 ```
 
 อยากรันกับ PostgreSQL: ตั้ง `TEST_DATABASE_URL=postgresql://user:pass@host:5432/ฐานข้อมูลว่าง` ก่อนรัน `pytest`
