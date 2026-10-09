@@ -4,3 +4,6 @@ email-validator==2.2.0
 sqlmodel==0.0.22
 psycopg[binary]==3.2.3
 python-multipart==0.0.20
+# alembic อยู่ในชุด runtime (ไม่ใช่ dev) เพราะตอน deploy แอปเรียก `alembic upgrade head`
+# จาก init_db() ใน app/database.py ทันทีที่สตาร์ต — ถ้าไม่มีแพ็กเกจนี้ในอิมเมจ โครงตารางจะไม่อัปเดต
+alembic==1.14.0

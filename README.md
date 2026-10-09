@@ -137,3 +137,18 @@ cd backend && pytest -q      # 41 เคส (ใช้ SQLite ชั่วคร
 
 เทสต์ครอบคลุมทั้ง happy path และกรณีที่ต้องถูกปฏิเสธ เช่น ผู้ใช้ทั่วไปยกระดับตัวเองเป็น admin,
 ดู/ยกเลิกใบจองของคนอื่น, จองคิวซ้อน, แนบเอกสารของคนอื่น, นัดรับรถก่อนสินเชื่ออนุมัติ และศูนย์บริการเต็ม
+
+## การเปลี่ยนโครงสร้างฐานข้อมูล (migration)
+
+โครงตารางคุมด้วย Alembic (`backend/alembic/`) รันทุกคำสั่งจากโฟลเดอร์ `backend/`:
+
+```bash
+cd backend
+alembic revision --autogenerate -m "เพิ่มคอลัมน์ ..."   # หลังแก้ app/models.py
+alembic upgrade head                                   # ลงโครงใหม่
+alembic downgrade -1                                   # ถอยกลับ 1 ขั้นถ้าพลาด
+```
+
+ตอน deploy บน PostgreSQL แอปรัน `alembic upgrade head` ให้เองตอนสตาร์ต (ตั้ง `AUTO_MIGRATE=0`
+ถ้าอยากรันเอง) ส่วนตอน dev/รันเทสต์ที่ใช้ SQLite ยังสร้างตารางด้วย `create_all()` ตามเดิม
+รายละเอียดอยู่ใน `docs/DEPLOY.md`

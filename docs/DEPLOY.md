@@ -97,3 +97,32 @@ Repo: <https://github.com/Etihw175/astra-motors>
 | Build นานมาก / timeout | โมเดล `.glb` 4 ไฟล์รวมกัน ~46 MB ต้องส่งขึ้น build server | `.dockerignore` ตัดโฟลเดอร์โมเดลสำรองออกแล้ว ถ้ายังช้าให้บีบไฟล์ `.glb` (gltf-pipeline / Draco) หรือย้ายไปโฮสต์เป็น static asset ภายนอก |
 | หน้าแรกขึ้น แต่ `/api/*` ได้ 404 | static mount ทับเส้นทาง API | `app.mount("/")` ต้องอยู่บรรทัดท้ายสุดของ `backend/app/main.py` (ปัจจุบันถูกต้องแล้ว) |
 | Deploy ค้างที่ `Health check failed` | `/api/health` เชื่อมฐานข้อมูลไม่ได้ จึงตอบ 500 | ดู Logs ของ service ว่าต่อ Postgres ไม่ได้เพราะอะไร มักเป็น `DATABASE_URL` ผิด region หรือฐานข้อมูลยัง provisioning ไม่เสร็จ |
+
+---
+
+## การเปลี่ยนโครงสร้างฐานข้อมูล (migration)
+
+โครงตารางคุมด้วย **Alembic** แล้ว (`backend/alembic/`, revision ตั้งต้น `0001_initial` = 13 ตารางตาม
+`app/models.py`) — ข้อความ "ไม่ต้องรัน migration" ในหัวข้อ *สิ่งที่ต้องรู้* ด้านบนใช้กับ SQLite ตอน dev
+เท่านั้น บน PostgreSQL ใช้ migration แทน เพราะ `create_all()` เพิ่มได้แค่ตารางใหม่
+แต่ **แก้คอลัมน์/ชนิดข้อมูลของตารางที่มีอยู่แล้วไม่ได้เลย** (เงียบ ๆ ไม่ error ด้วย)
+
+รันทุกคำสั่งจากโฟลเดอร์ `backend/` (ที่เดียวกับ `alembic.ini`):
+
+```bash
+cd backend
+alembic revision --autogenerate -m "เพิ่มคอลัมน์ ..."   # 1) แก้ app/models.py เสร็จแล้วสร้างไฟล์ migration
+alembic upgrade head                                   # 2) ลงโครงใหม่กับฐานข้อมูลที่ DATABASE_URL ชี้อยู่
+alembic downgrade -1                                   # 3) ถอยกลับ 1 ขั้นถ้าผลไม่เป็นอย่างที่คิด
+```
+
+> เปิดไฟล์ที่ `revision --autogenerate` สร้างให้อ่านก่อน **ทุกครั้ง** แล้ว commit ไฟล์นั้นเข้า repo
+> ด้วย — ไม่ใช่ไฟล์ที่ generate ทิ้งได้
+
+**บน Render ไม่ต้องรันเอง** — `init_db()` ใน `backend/app/database.py` เรียก `alembic upgrade head`
+ให้อัตโนมัติตอนแอปสตาร์ต (ก่อน seed ข้อมูล) ทุกครั้งที่ deploy ใหม่ จึงไม่ต้องเข้า shell ของ Render
+ตั้ง env var `AUTO_MIGRATE=0` ถ้าอยากปิดพฤติกรรมนี้แล้วรัน migration ด้วยมือเอง
+
+หมายเหตุ: SQLite (dev ในเครื่อง + `pytest`) ยังใช้ `SQLModel.metadata.create_all()` ตามเดิม
+เพราะเทสต์สร้างฐานข้อมูลใหม่ทุกครั้งอยู่แล้ว ส่วนเทสต์ `backend/tests/test_migrations.py`
+คอยเช็กว่า migration ยัง upgrade/downgrade ผ่านและมี head เดียว
