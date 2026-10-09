@@ -21,7 +21,7 @@ from ..database import get_session
 from ..events import publish
 from ..models import Loan, Reservation, ServiceAppointment, TestDrive, User
 from ..schemas import DeliveryCreate, ReservationCreate, TestDriveCreate
-from ..security import can_touch, get_current_user, get_optional_user
+from ..security import can_touch, get_current_user, get_optional_user, require_admin
 from .loans import settle_due_loans
 from .showrooms import is_slot_taken, parse_future_date
 
@@ -117,6 +117,16 @@ def quote_reservation(db: Session, car_id: str, color_id: str, option_ids: list[
     if not color:
         raise HTTPException(status_code=404, detail="ไม่พบสีที่เลือก")
 
+    # ออปชันที่ไม่มีในรุ่นนี้ต้องตอบ 400 ไม่ใช่เงียบ ๆ ตัดทิ้ง
+    # ของเดิมกรองด้วย list comprehension เฉย ๆ ลูกค้าที่พิมพ์ id ผิด (หรือหน้าเว็บส่ง id เก่า
+    # หลังแคตตาล็อกเปลี่ยน) จึงได้ใบจองราคาฐานทั้งที่เห็นยอดรวมอีกราคาบนหน้าจอ
+    known = {o["id"]: o for o in car.options}
+    unknown = [oid for oid in dict.fromkeys(option_ids) if oid not in known]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ไม่พบออปชันรหัส {', '.join(unknown)} ในรุ่น {car.name}",
+        )
     options = [o for o in car.options if o["id"] in option_ids]
     total = car.price + color["extra"] + sum(o["price"] for o in options)
 
@@ -166,20 +176,24 @@ def issue_reservation(db: Session, user: User, quote: dict, *, payment_method: s
 @router.post("/reservations", status_code=201)
 def create_reservation(
     body: ReservationCreate,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(require_admin),
     db: Session = Depends(get_session),
 ):
-    """เส้นทาง legacy: ออกใบจองทันทีโดยสมมติว่าเงินจองเข้าแล้ว
+    """ออกใบจองทันทีโดยไม่ผ่านการชำระเงิน — เฉพาะผู้ดูแลระบบ/พนักงานโชว์รูม
 
-    คงไว้เพื่อเทสต์/เดโมที่ต้องการใบจองในคำขอเดียว ส่วนหน้าเว็บใช้ Payment service
-    (POST /api/payments → /confirm) ซึ่งเดินตามขั้นตอนจริงคือจ่ายเงินให้สำเร็จก่อนจึงออกใบจอง
+    ลูกค้าต้องเดินเส้นทางจริงคือ Payment service (POST /api/payments → /confirm)
+    คือจ่ายเงินจองให้สำเร็จก่อน แล้วระบบจึงออกใบจองให้ในทรานแซกชันเดียวกัน
+
+    ทำไมต้องปิดไม่ให้ลูกค้าเรียก: เส้นนี้ออกใบจองโดยไม่มีเงินเข้า และใบจองแต่ละใบให้คะแนนสะสม
+    ลูกค้าที่ล็อกอินอยู่จึงยิงซ้ำ ๆ เพื่อปั๊มคะแนนแลกของรางวัลได้ฟรี (loyalty farming)
+    ที่คงไว้เพราะมีการใช้งานจริง: พนักงานรับจองให้ลูกค้า walk-in ที่จ่ายเงินสดหน้าเคาน์เตอร์
     """
     if body.payment_method not in ("promptpay", "card"):
         raise HTTPException(status_code=400, detail="ช่องทางชำระเงินไม่ถูกต้อง")
 
     quote = quote_reservation(db, body.car_id, body.color_id, body.option_ids)
     record = issue_reservation(
-        db, user, quote,
+        db, admin, quote,
         payment_method=body.payment_method,
         name=body.name, phone=body.phone, email=body.email,
         contact_message_only=body.contact_message_only,
@@ -210,6 +224,19 @@ def cancel_reservation(
         raise HTTPException(status_code=400, detail="ใบจองนี้ถูกยกเลิกไปแล้ว")
     if record.status == "delivery_scheduled":
         raise HTTPException(status_code=400, detail="นัดรับรถแล้ว ยกเลิกออนไลน์ไม่ได้ กรุณาติดต่อโชว์รูม")
+
+    # ยกเลิกคำขอสินเชื่อที่ผูกกับใบจองนี้ไปด้วย
+    # เลือก "ยกเลิกตามไป" ไม่ใช่ "ห้ามยกเลิกถ้าสินเชื่อผ่านแล้ว" เพราะลูกค้ามีสิทธิ์ถอนการจอง
+    # ตามเงื่อนไขคืนเงินเสมอ การบังคับให้ค้างไว้เพราะไฟแนนซ์อนุมัติแล้วไม่ยุติธรรมกับลูกค้า
+    # ถ้าไม่ยกเลิก: settle_due_loans จะเดินต่อแล้วส่งแจ้งเตือน "สินเชื่ออนุมัติแล้ว"
+    # ของใบจองที่ยกเลิกไปแล้ว และ record ค้างสถานะ approved ให้หลังบ้านสับสน
+    if record.loan_id:
+        loan = db.get(Loan, record.loan_id)
+        if loan and loan.status in ("reviewing", "approved"):
+            loan.status = "cancelled"
+            loan.decided_at = datetime.now()
+            loan.result = {"message": f"คำขอสินเชื่อถูกยกเลิกพร้อมใบจอง {record.code}"}
+            db.add(loan)
 
     within_full_refund = (datetime.now() - record.created_at).days < REFUND_FULL_WITHIN_DAYS
     record.status = "cancelled"

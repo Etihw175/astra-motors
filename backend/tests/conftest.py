@@ -12,3 +12,20 @@ _tmp = Path(tempfile.mkdtemp(prefix="astra-test-"))
 os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL") or f"sqlite:///{(_tmp / 'test.db').as_posix()}"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import pytest  # noqa: E402
+
+from app import ratelimit  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits():
+    """ล้างตัวนับ rate limit ก่อนทุกเทสต์
+
+    ตัวนับเก็บในหน่วยความจำของ process และเทสต์ทั้งไฟล์ใช้ TestClient ตัวเดียว (IP เดียว)
+    ถ้าไม่ล้าง เทสต์ที่สมัครสมาชิกจะไปกินโควตาของเทสต์ถัด ๆ ไปจนได้ 429 ทั้งที่ไม่เกี่ยวกัน
+    เทสต์ที่ตรวจตัว rate limit เองจะยิงจนชนเพดานภายในเทสต์เดียว จึงไม่ต้องพึ่งสถานะข้ามเทสต์
+    """
+    ratelimit.reset()
+    yield
+    ratelimit.reset()

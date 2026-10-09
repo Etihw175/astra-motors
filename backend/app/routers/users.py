@@ -42,7 +42,7 @@ def _get_or_404(db: Session, user_id: int) -> User:
 def list_users(
     page: int = Query(1, ge=1, description="หน้าที่ต้องการ เริ่มที่ 1"),
     per_page: int = Query(10, ge=1, le=100, description="จำนวนต่อหน้า สูงสุด 100"),
-    q: str | None = Query(None, description="ค้นหาจาก username / ชื่อ / อีเมล"),
+    q: str | None = Query(None, description="ค้นหาจาก username / ชื่อ / อีเมล / เบอร์โทร"),
     role: str | None = Query(None, description="กรองตามสิทธิ์: customer หรือ admin"),
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_session),
@@ -59,6 +59,8 @@ def list_users(
             func.lower(User.username).like(needle),
             func.lower(User.full_name).like(needle),
             func.lower(User.email).like(needle),
+            # เบอร์โทรเป็นคำค้นที่พนักงานใช้บ่อยที่สุด (ลูกค้าโทรเข้ามาแล้วแจ้งแต่เบอร์)
+            User.phone.like(needle),
         ))
     if role:
         if role not in ("customer", "admin"):
@@ -176,7 +178,7 @@ def check_username(
     db: Session = Depends(get_session),
 ):
     """ให้หน้าสมัครสมาชิกเรียกเช็คแบบ real-time ก่อนกดปุ่มสมัคร (ไม่ต้องล็อกอิน)"""
-    valid = bool(USERNAME_RE.match(name))
+    valid = bool(USERNAME_RE.fullmatch(name))
     taken = find_by_username(db, name) is not None
     return {
         "username": name,

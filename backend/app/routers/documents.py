@@ -1,6 +1,7 @@
 # Router: อัปโหลดเอกสารประกอบสินเชื่อ (journey ขั้นตอน 5: "อัปโหลดเอกสารผ่านระบบ" ไม่ต้องถือไปโชว์รูม)
 # รับเฉพาะ PDF/JPG/PNG ไม่เกิน 5 MB — ตรวจทั้งนามสกุลและ "ลายเซ็น" ของไฟล์ (magic bytes)
 # กันคนเปลี่ยนชื่อไฟล์อันตรายเป็น .pdf แล้วอัปโหลด
+import os
 import secrets
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -20,6 +21,24 @@ SIGNATURES = {
     "image/jpeg": (b"\xff\xd8\xff",),
     "image/png": (b"\x89PNG\r\n\x1a\n",),
 }
+
+
+MAX_FILENAME = 120
+
+
+def safe_filename(raw: str | None) -> str:
+    """ชื่อไฟล์ที่เก็บลงฐานข้อมูลได้อย่างปลอดภัย
+
+    ชื่อไฟล์มาจากผู้ใช้ จึงถือเป็นข้อมูลไม่น่าเชื่อถือ:
+      - basename ตัด path ทิ้ง ("../../evil.pdf" -> "evil.pdf") กัน path traversal
+        ถ้าวันหน้ามีการเขียนไฟล์ลงดิสก์ หรือเอาชื่อไปใส่ header Content-Disposition
+      - ตัดอักขระควบคุม (รวม \\r\\n) กันคนแทรกบรรทัดใหม่เข้า header / ปลอม log
+      - ยาวไม่เกิน 120 ตัวอักษร ให้พอดีคอลัมน์และไม่ทำให้หน้าเว็บเพี้ยน
+    """
+    name = (raw or "").replace("\\", "/")        # Windows ส่งมาด้วย \\ ซึ่ง basename ของ POSIX ไม่รู้จัก
+    name = os.path.basename(name).strip()
+    name = "".join(ch for ch in name if ch.isprintable())
+    return name[:MAX_FILENAME] or "document"
 
 
 def _detect_type(head: bytes) -> str | None:
@@ -62,7 +81,7 @@ async def upload_document(
         id=secrets.token_hex(8),
         user_id=user.id,
         kind=kind,
-        filename=(file.filename or "document")[:120],
+        filename=safe_filename(file.filename),
         content_type=content_type,
         size=len(data),
         data=data,

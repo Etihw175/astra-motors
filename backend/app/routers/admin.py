@@ -9,7 +9,7 @@ from sqlmodel import Session, func, or_, select
 from ..crud import loan_dict, reservation_dict, service_dict, testdrive_dict
 from ..database import get_session
 from ..events import publish
-from ..models import Loan, Reservation, ServiceAppointment, TestDrive, User
+from ..models import Car, Loan, Reservation, ServiceAppointment, TestDrive, User
 from ..security import require_admin
 from .loans import settle_due_loans
 
@@ -17,7 +17,8 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(re
 
 TESTDRIVE_STATUSES = ("confirmed", "cancelled", "completed", "no_show")
 RESERVATION_STATUSES = ("reserved", "delivery_scheduled", "cancelled")
-LOAN_STATUSES = ("reviewing", "approved", "rejected")
+# "cancelled" = คำขอถูกยกเลิกไปพร้อมใบจอง (ดู bookings.cancel_reservation)
+LOAN_STATUSES = ("reviewing", "approved", "rejected", "cancelled")
 SERVICE_STATUSES = ("booked", "cancelled", "completed")
 
 
@@ -202,16 +203,31 @@ def list_loans(
 
 # ---------- 5. นัดเข้าศูนย์บริการทั้งหมด ----------
 
-@router.get("/service-appointments", summary="นัดเข้าศูนย์บริการทุกสาขา (กรอง + แบ่งหน้า)")
+def _customers(db: Session, user_ids: list[int | None]) -> dict[int, dict]:
+    """ชื่อ/เบอร์ของลูกค้าทั้งหน้าในคิวรีเดียว (กัน N+1) — บัญชีที่ถูกลบไปแล้วจะไม่อยู่ใน dict"""
+    wanted = {uid for uid in user_ids if uid}
+    if not wanted:
+        return {}
+    rows = db.exec(select(User.id, User.full_name, User.phone).where(User.id.in_(wanted))).all()
+    return {uid: {"name": name, "phone": phone} for uid, name, phone in rows}
+
+
+@router.get("/service-appointments", summary="นัดเข้าศูนย์บริการทุกสาขา (ค้นหา + กรอง + แบ่งหน้า)")
 def list_service_appointments(
     status: str | None = Query(None, description="booked | cancelled | completed"),
     showroom_id: str | None = Query(None),
     date_from: str | None = Query(None, description="ตั้งแต่วันที่ YYYY-MM-DD"),
     date_to: str | None = Query(None, description="ถึงวันที่ YYYY-MM-DD"),
+    q: str | None = Query(None, description="ค้นหาจากรหัสนัด / ชื่อลูกค้า / เบอร์โทร / รุ่นรถ"),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_session),
 ):
+    """คืนชื่อ-เบอร์ลูกค้ามาด้วย เพราะพนักงานต้องโทรแจ้งว่าอะไหล่มาถึง/งานเสร็จแล้ว
+
+    ไม่ไปเพิ่มฟิลด์นี้ใน crud.service_dict เพราะฟังก์ชันนั้นถูกใช้กับ endpoint ฝั่งลูกค้าด้วย
+    ลูกค้าไม่ควรเห็นชื่อ/เบอร์ของใคร (ของตัวเองก็รู้อยู่แล้ว) — เอามาต่อที่นี่ที่เดียวจึงรั่วไม่ได้
+    """
     stmt = select(ServiceAppointment)
     if value := _check_status(status, SERVICE_STATUSES):
         stmt = stmt.where(ServiceAppointment.status == value)
@@ -221,11 +237,31 @@ def list_service_appointments(
         stmt = stmt.where(ServiceAppointment.date >= start)
     if end := _parse_date(date_to, "date_to"):
         stmt = stmt.where(ServiceAppointment.date <= end)
+    if q:
+        # ชื่อ/เบอร์อยู่ตาราง users และชื่อรุ่นอยู่ตาราง cars จึง outer join เข้ามาเพื่อค้นหา
+        # (outer เพราะนัดของบัญชีที่ถูกลบมี user_id = NULL แต่ยังต้องค้นด้วยรหัสนัดได้)
+        needle = _needle(q)
+        stmt = (
+            stmt.outerjoin(User, User.id == ServiceAppointment.user_id)
+            .outerjoin(Car, Car.id == ServiceAppointment.car_id)
+            .where(or_(
+                func.lower(ServiceAppointment.code).like(needle),
+                func.lower(User.full_name).like(needle),
+                User.phone.like(needle),
+                func.lower(Car.name).like(needle),
+            ))
+        )
 
     rows, meta = _page(
         db, stmt.order_by(ServiceAppointment.date, ServiceAppointment.time), page, per_page
     )
-    return {"items": [dict(service_dict(r, db), user_id=r.user_id) for r in rows], **meta}
+    customers = _customers(db, [r.user_id for r in rows])
+    items = [
+        dict(service_dict(r, db), user_id=r.user_id,
+             customer=customers.get(r.user_id) or {"name": None, "phone": None})
+        for r in rows
+    ]
+    return {"items": items, **meta}
 
 
 # ---------- 6-7. ปิดงานหน้าเคาน์เตอร์ ----------
@@ -260,6 +296,11 @@ def complete_testdrive(
 
 @router.post("/service-appointments/{code}/complete", summary="ปิดงานบริการว่าเสร็จแล้ว")
 def complete_service_appointment(code: str, db: Session = Depends(get_session)):
+    """ปิดงานได้เฉพาะวันนัดหรือหลังจากนั้น — เหตุผลเดียวกับการปิดนัดทดลองขับ
+
+    ปิดงานล่วงหน้าคือบันทึกว่า "ซ่อมเสร็จแล้ว" ทั้งที่รถยังไม่เข้าศูนย์ ทำให้ช่องซ่อมของวันนั้น
+    ว่างผิดความจริง ลูกค้าได้แจ้งเตือน "งานเสร็จแล้ว" ก่อนเวลา และสถิติหลังบ้านเพี้ยนทั้งชุด
+    """
     record = db.get(ServiceAppointment, code)
     if record is None:
         raise HTTPException(status_code=404, detail="ไม่พบนัดหมายนี้")
@@ -268,6 +309,8 @@ def complete_service_appointment(code: str, db: Session = Depends(get_session)):
             status_code=400,
             detail=f"นัดนี้อยู่สถานะ {record.status} แล้ว ปิดงานได้เฉพาะนัดที่ยังรอเข้าศูนย์",
         )
+    if record.date > date_cls.today():
+        raise HTTPException(status_code=400, detail="ยังไม่ถึงวันนัด ปิดงานล่วงหน้าไม่ได้")
 
     record.status = "completed"
     db.add(record)

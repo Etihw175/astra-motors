@@ -9,7 +9,7 @@ from ..database import get_session
 from ..events import publish
 from ..models import Car, Reservation, Review, TestDrive, User
 from ..schemas import ReviewCreate
-from ..security import can_touch, get_current_user
+from ..security import can_touch, get_current_user, get_optional_user
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 
@@ -22,7 +22,13 @@ def _display_name(user: User | None) -> str:
     return f"{parts[0]} {parts[1][0]}." if len(parts) > 1 else parts[0]
 
 
-def review_dict(review: Review, db: Session) -> dict:
+def review_dict(review: Review, db: Session, viewer: User | None = None) -> dict:
+    """รีวิวในรูปแบบที่เปิดเผยได้
+
+    ไม่ส่ง user_id ของผู้เขียนออกไป: เป็นรหัสภายในที่ทำให้คนนอกเชื่อมรีวิวหลายรุ่นเข้าเป็นคนเดียวกัน
+    และนับจำนวนสมาชิกทั้งระบบได้ หน้าเว็บต้องการแค่ "รีวิวนี้ของฉันไหม" จึงคิดให้เป็น is_mine
+    (ผู้ดูแลระบบลบรีวิวใครก็ได้อยู่แล้ว จึงเห็น is_mine=True เพื่อให้ปุ่มลบโผล่ตามสิทธิ์จริง)
+    """
     car = db.get(Car, review.car_id)
     return {
         "id": review.id,
@@ -32,7 +38,7 @@ def review_dict(review: Review, db: Session) -> dict:
         "comment": review.comment,
         "verified": review.verified,
         "author": _display_name(db.get(User, review.user_id)),
-        "user_id": review.user_id,
+        "is_mine": viewer is not None and can_touch(viewer, review.user_id),
         "created_at": review.created_at.isoformat(),
     }
 
@@ -49,19 +55,21 @@ def _has_experience(db: Session, user_id: int, car_id: str) -> bool:
 def list_reviews(
     car_id: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
+    viewer: User | None = Depends(get_optional_user),
     db: Session = Depends(get_session),
 ):
+    """อ่านได้ทุกคน — ล็อกอินอยู่จะได้ธง is_mine มาด้วยเพื่อให้หน้าเว็บแสดงปุ่มลบของตัวเอง"""
     stmt = select(Review)
     if car_id:
         stmt = stmt.where(Review.car_id == car_id)
     rows = db.exec(stmt.order_by(Review.id.desc()).limit(limit)).all()
-    return [review_dict(r, db) for r in rows]
+    return [review_dict(r, db, viewer) for r in rows]
 
 
 @router.get("/mine", summary="รีวิวที่ฉันเขียน")
 def my_reviews(user: User = Depends(get_current_user), db: Session = Depends(get_session)):
     rows = db.exec(select(Review).where(Review.user_id == user.id).order_by(Review.id.desc())).all()
-    return [review_dict(r, db) for r in rows]
+    return [review_dict(r, db, user) for r in rows]
 
 
 @router.get("/summary", summary="คะแนนเฉลี่ยของทุกรุ่น")
@@ -93,7 +101,7 @@ def create_review(
     publish(db, "review.posted", review=review, car=car)
     db.commit()
     db.refresh(review)
-    return review_dict(review, db)
+    return review_dict(review, db, user)
 
 
 @router.delete("/{review_id}", status_code=204, summary="ลบรีวิว (เจ้าของหรือผู้ดูแล)")

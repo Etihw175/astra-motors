@@ -75,8 +75,16 @@ def promo_status(car: Car, today: date_cls | None = None) -> dict | None:
 
 
 def car_dict(car: Car, ratings: dict | None = None) -> dict:
+    """รถ 1 คันในรูป JSON ที่หน้าเว็บใช้
+
+    promotion ยังเป็นก้อนดิบเหมือนเดิม (ไม่ลบทิ้ง รูปร่าง response จึงเข้ากันได้กับของเดิม)
+    แต่เพิ่ม promotion_status ที่คิดวันหมดอายุมาให้แล้ว เพราะก้อนดิบมีแต่ title/expires
+    หน้าเว็บจึงแยกไม่ออกว่าโปรฯ ยังใช้ได้อยู่ไหม แล้วโชว์โปรฯ ที่หมดอายุไปแล้วเป็นของใหม่
+    (รุ่นที่ไม่มีโปรฯ ได้ None ตามเดิมของ promo_status)
+    """
     data = car.model_dump()
     data["rating"] = (ratings or {}).get(car.id, {"avg": None, "count": 0})
+    data["promotion_status"] = promo_status(car)
     return data
 
 

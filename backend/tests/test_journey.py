@@ -36,13 +36,21 @@ def free_slot(showroom_id: str) -> str:
 
 
 def reserve(headers: dict, car_id: str = "porsche-911", color_id: str = "guards-red") -> dict:
-    res = client.post("/api/reservations", headers=headers, json={
+    """ออกใบจองผ่านเส้นทางจริงของลูกค้า: จ่ายเงินจองให้สำเร็จก่อน แล้วระบบจึงออกใบจอง
+
+    ไม่ใช้ POST /api/reservations แล้ว เพราะเส้นนั้นออกใบจองโดยไม่มีเงินเข้า
+    และถูกปิดไว้ให้เฉพาะพนักงานที่รับจองลูกค้า walk-in (ดู test_admin)
+    """
+    pay = client.post("/api/payments", headers=headers, json={
         "car_id": car_id, "color_id": color_id, "option_ids": [],
         "name": "ทดสอบ เส้นทางลูกค้า", "phone": "0812223333", "email": "journey@example.com",
-        "payment_method": "promptpay",
+        "method": "promptpay",
     })
-    assert res.status_code == 201, res.text
-    return res.json()
+    assert pay.status_code == 201, pay.text
+    confirmed = client.post(f"/api/payments/{pay.json()['id']}/confirm", headers=headers)
+    assert confirmed.status_code == 200, confirmed.text
+    code = confirmed.json()["reservation_code"]
+    return client.get(f"/api/reservations/{code}", headers=headers).json()
 
 
 # ---------- ขั้นตอน 1-3: รับรู้ / ค้นหา / รายละเอียด ----------

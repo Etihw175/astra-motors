@@ -17,7 +17,9 @@ from .models import AuthSession, User, now
 
 PBKDF2_ITERATIONS = 120_000
 TOKEN_TTL_HOURS = 8            # token หมดอายุใน 8 ชั่วโมง
-USERNAME_RE = re.compile(r"^[a-zA-Z0-9_.]{4,20}$")
+# ใช้ \A...\Z ไม่ใช่ ^...$ และต้องเรียกด้วย fullmatch เสมอ
+# เพราะ $ ของ Python ยอมให้มีอักขระขึ้นบรรทัดใหม่ปิดท้ายได้ ชื่อที่ลงท้ายด้วย newline จึงเคยผ่าน
+USERNAME_RE = re.compile(r"\A[a-zA-Z0-9_.]{4,20}\Z")
 
 # auto_error=False เพื่อให้เราตอบข้อความภาษาไทยเองแทน error มาตรฐานของ FastAPI
 bearer_scheme = HTTPBearer(auto_error=False, description="ใส่ token ที่ได้จาก POST /api/login")

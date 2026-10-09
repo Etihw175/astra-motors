@@ -36,20 +36,28 @@ def _build_alternatives(db: Session, record: Loan) -> list[str]:
     """สินเชื่อไม่ผ่าน — คำนวณทางเลือกเป็นตัวเลขจริง ไม่ใช่คำแนะนำลอย ๆ"""
     plan = record.plan
     income = record.monthly_income
+    car_price = record.down_payment + record.principal   # ราคารถที่ล็อกไว้ในใบจองนี้
     options: list[str] = []
 
     # ทางเลือกที่ 1: เพิ่มเงินดาวน์ (ปัดขึ้นหลักหมื่นให้เป็นตัวเลขที่คุยกันจริงได้)
+    #
+    # ต้องกัน 2 อย่าง ไม่งั้นคำแนะนำกลายเป็นเรื่องไร้สาระเมื่อรายได้ต่ำมาก:
+    #   - ดาวน์รวมต้องยังน้อยกว่าราคารถ (ดาวน์ 10,505,000 บาทของรถ 10,500,000 บาท = ซื้อสดแล้ว
+    #     ไม่ใช่ "ทางเลือกสินเชื่อ")
+    #   - ยอดผ่อนใหม่ต้องเป็นบวก (ของเดิมเคยเสนอ "ยอดผ่อนจะลดเหลือประมาณ -92 บาท/เดือน")
     affordable = _affordable_principal(income, plan["flat_rate"], record.term_months)
     if 0 < affordable < record.principal:
         extra_down = record.principal - affordable
         extra_down = -(-extra_down // 10_000) * 10_000
-        new_monthly = _monthly_payment(record.principal - extra_down,
+        total_down = record.down_payment + extra_down
+        new_monthly = _monthly_payment(max(record.principal - extra_down, 0),
                                        plan["flat_rate"], record.term_months)
-        options.append(
-            f"เพิ่มเงินดาวน์อีกประมาณ {extra_down:,} บาท "
-            f"(รวมดาวน์ {record.down_payment + extra_down:,} บาท) "
-            f"ยอดผ่อนจะลดเหลือประมาณ {new_monthly:,} บาท/เดือน"
-        )
+        if total_down < car_price and new_monthly > 0:
+            options.append(
+                f"เพิ่มเงินดาวน์อีกประมาณ {extra_down:,} บาท "
+                f"(รวมดาวน์ {total_down:,} บาท) "
+                f"ยอดผ่อนจะลดเหลือประมาณ {new_monthly:,} บาท/เดือน"
+            )
 
     # ทางเลือกที่ 2: ยืดงวดผ่อนให้ยาวขึ้นภายในแผนเดิม
     for term in sorted(plan["terms"]):
@@ -75,6 +83,15 @@ def _build_alternatives(db: Session, record: Loan) -> list[str]:
                 f"ยอดผ่อนประมาณ {monthly:,} บาท/เดือน"
             )
             break
+
+    if not options:
+        # รายได้ต่ำกว่าราคารถมากจนปรับตัวเลขอย่างไรก็ไม่ผ่าน — พูดตรง ๆ ดีกว่าเสนอตัวเลขเพ้อฝัน
+        options.append(
+            f"รายได้ที่แจ้ง ({income:,} บาท/เดือน) ต่ำกว่าเกณฑ์ของรุ่นนี้มาก "
+            f"ปรับเงินดาวน์หรือจำนวนงวดแล้วก็ยังไม่ผ่าน "
+            f"แนะนำพิจารณารุ่นที่ราคาต่ำกว่า หรือเพิ่มผู้กู้ร่วมเพื่อเพิ่มฐานรายได้รวม"
+        )
+        return options
 
     options.append("เพิ่มผู้กู้ร่วม (co-borrower) เพื่อเพิ่มฐานรายได้รวมในการพิจารณา")
     return options

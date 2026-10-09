@@ -42,6 +42,14 @@ def _points_testdrive(db, record, car, **_):
     add_points(db, record.user_id, POINTS_EARN["testdrive"], f"จองทดลองขับ {car.name}", record.code)
 
 
+@subscribe("testdrive.cancelled")
+def _points_testdrive_reversed(db, record, **_):
+    # ต้องมีคู่กับ _points_testdrive เสมอ ไม่งั้นจอง-ยกเลิกวนซ้ำ ๆ ได้คะแนนฟรีไม่จำกัด
+    # (จองพรุ่งนี้ ยกเลิก ทำ 7 รอบ = 700 คะแนน แลกของรางวัลจริงได้) — กติกาเดียวกับใบจอง/รีวิว/นัดศูนย์
+    add_points(db, record.user_id, -POINTS_EARN["testdrive"],
+               f"หักคืนคะแนน: ยกเลิกนัดทดลองขับ {record.code}", record.code)
+
+
 @subscribe("reservation.created")
 def _points_reservation(db, record, **_):
     add_points(db, record.user_id, POINTS_EARN["reservation"], f"วางเงินจอง {record.car_name}", record.code)
@@ -163,6 +171,19 @@ def create_service_appointment(
     day = parse_future_date(body.date)
     if _service_load(db, body.showroom_id, day).get(body.time, 0) >= SERVICE_BAYS:
         raise HTTPException(status_code=409, detail="ช่วงเวลานี้เต็มแล้ว กรุณาเลือกเวลาอื่น")
+    # คนเดียวเข้าศูนย์ได้ทีละคัน: ถ้าไม่กัน คนเดียวจองซ้ำจนกินช่องซ่อมหมดทั้งช่วงเวลาได้
+    mine = db.exec(
+        select(ServiceAppointment.code).where(
+            ServiceAppointment.user_id == user.id,
+            ServiceAppointment.showroom_id == body.showroom_id,
+            ServiceAppointment.date == day,
+            ServiceAppointment.time == body.time,
+            ServiceAppointment.status == "booked",
+        )
+    ).first()
+    if mine:
+        raise HTTPException(status_code=409,
+                            detail=f"คุณมีนัดในช่วงเวลานี้อยู่แล้ว (รหัส {mine}) กรุณาเลือกเวลาอื่น")
 
     record = ServiceAppointment(
         code=new_code("SV"),

@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, func, select, update
 
+from .. import ratelimit
 from ..crud import promo_status
 from ..data import POINTS_EARN
 from ..database import engine, get_session
@@ -276,12 +277,36 @@ def _ticket_hash(ticket: str) -> str:
     return hashlib.sha256(ticket.encode("utf-8")).hexdigest()
 
 
+MAX_TICKETS_PER_USER = 5   # เปิดสตรีมพร้อมกันหลายแท็บได้ แต่ไม่ให้สะสมตั๋วค้างเป็นร้อยใบ
+
+
+def drop_tickets_of(user_id: int) -> int:
+    """ทิ้งตั๋วที่ยังไม่ถูกใช้ของผู้ใช้คนนี้ทั้งหมด — คืนจำนวนที่ทิ้ง
+
+    ต้องเรียกตอน logout และตอนเปลี่ยนรหัสผ่าน: ตั๋วเป็นสิทธิ์เข้าถึงกล่องแจ้งเตือนคนละชุดกับ
+    session token ถ้าไม่ทิ้ง คนที่ได้ตั๋วไปจะเปิดสตรีมอ่านแจ้งเตือนต่อได้แม้ token ถูกเพิกถอนแล้ว
+    """
+    doomed = [key for key, (owner, _) in _stream_tickets.items() if owner == user_id]
+    for key in doomed:
+        del _stream_tickets[key]
+    return len(doomed)
+
+
 def _issue_ticket(user_id: int) -> str:
     now_ = datetime.now()
     # เก็บกวาดตั๋วหมดอายุทุกครั้งที่ออกใบใหม่ (dict นี้จึงไม่โตไม่หยุด)
     for key, (_, expires_at) in list(_stream_tickets.items()):
         if expires_at < now_:
             del _stream_tickets[key]
+
+    # ตั๋วค้างของคนนี้เกินเพดาน -> ทิ้งใบที่เก่าที่สุด (หมดอายุก่อน) ให้พอดีเพดาน
+    mine = sorted(
+        (key for key, (owner, _) in _stream_tickets.items() if owner == user_id),
+        key=lambda key: _stream_tickets[key][1],
+    )
+    for key in mine[: max(0, len(mine) - MAX_TICKETS_PER_USER + 1)]:
+        del _stream_tickets[key]
+
     ticket = secrets.token_urlsafe(32)
     _stream_tickets[_ticket_hash(ticket)] = (user_id, now_ + timedelta(seconds=TICKET_TTL_SECONDS))
     return ticket
@@ -339,7 +364,13 @@ def _latest_id(user_id: int) -> int:
 
 
 @router.post("/stream-ticket", summary="ขอตั๋วอายุสั้นเพื่อเปิดสตรีมแจ้งเตือน (SSE)")
-def stream_ticket(user: User = Depends(get_current_user)):
+def stream_ticket(request: Request, user: User = Depends(get_current_user)):
+    # จำกัดการขอตั๋ว: หน้าเว็บขอใบใหม่เฉพาะตอนเปิด/ต่อสตรีม 30 ใบ/นาที จึงเหลือ ๆ อยู่แล้ว
+    # ถ้าสูงกว่านี้คือสคริปต์ยิงถี่ (ตั๋วใช้ครั้งเดียวก็จริง แต่การออกใบใหม่กินหน่วยความจำฝั่งเซิร์ฟเวอร์)
+    ratelimit.hit(
+        ("stream-ticket", ratelimit.client_ip(request), user.id),
+        ratelimit.TICKET_LIMIT, ratelimit.TICKET_WINDOW,
+    )
     return {"ticket": _issue_ticket(user.id), "expires_in": TICKET_TTL_SECONDS}
 
 

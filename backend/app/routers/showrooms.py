@@ -36,14 +36,24 @@ def is_slot_taken(db: Session, showroom_id: str, day: date_cls, time: str) -> bo
     return _walk_in_taken(showroom_id, day.isoformat(), time) or time in booked_times(db, showroom_id, day)
 
 
+# จองล่วงหน้าได้ไกลสุดกี่วัน — คิวที่ไกลกว่านี้โชว์รูมยังจัดตารางพนักงาน/รถสาธิตไม่ได้
+# และปล่อยไว้จะมีคิวปี 9999 มาจองค้างระบบ (ยกเลิกไม่ได้เพราะต้องยกเลิกก่อนวันนัด)
+MAX_BOOKING_DAYS_AHEAD = 90
+
+
 def parse_future_date(value: str) -> date_cls:
-    """วันที่ต้องอยู่ในรูป YYYY-MM-DD และเป็นวันพรุ่งนี้เป็นต้นไป (edge case: จองย้อนหลัง/วันนี้)"""
+    """วันที่ต้องอยู่ในรูป YYYY-MM-DD, เป็นวันพรุ่งนี้เป็นต้นไป และไม่เกินเพดานล่วงหน้า"""
     try:
         day = date_cls.fromisoformat(value)
     except ValueError:
         raise HTTPException(status_code=400, detail="รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)")
     if day <= date_cls.today():
         raise HTTPException(status_code=400, detail="กรุณาเลือกวันล่วงหน้าอย่างน้อย 1 วัน")
+    if (day - date_cls.today()).days > MAX_BOOKING_DAYS_AHEAD:
+        raise HTTPException(
+            status_code=400,
+            detail=f"จองล่วงหน้าได้ไม่เกิน {MAX_BOOKING_DAYS_AHEAD} วัน กรุณาเลือกวันที่ใกล้กว่านี้",
+        )
     return day
 
 

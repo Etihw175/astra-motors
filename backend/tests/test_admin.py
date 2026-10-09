@@ -70,6 +70,29 @@ def book_testdrive(headers: dict, showroom_id: str, phone: str, taken: set[str])
     return res.json()
 
 
+def pay_and_reserve(headers: dict, car_id: str, color_id: str, phone: str, email: str,
+                    method: str = "promptpay") -> dict:
+    """เส้นทางจริงของลูกค้า: จ่ายเงินจองก่อน แล้วระบบจึงออกใบจองให้"""
+    pay = client.post("/api/payments", headers=headers, json={
+        "car_id": car_id, "color_id": color_id, "option_ids": [],
+        "name": "ทดสอบ หลังบ้าน", "phone": phone, "email": email, "method": method,
+    })
+    assert pay.status_code == 201, pay.text
+    confirmed = client.post(f"/api/payments/{pay.json()['id']}/confirm", headers=headers)
+    assert confirmed.status_code == 200, confirmed.text
+    code = confirmed.json()["reservation_code"]
+    return client.get(f"/api/reservations/{code}", headers=headers).json()
+
+
+def backdate_service(code: str, day: date) -> None:
+    """เลื่อนวันนัดเข้าศูนย์ย้อนหลังตรงฐานข้อมูล — ลูกค้าจองย้อนหลังไม่ได้ จึงสร้างสถานะ "ถึงวันนัดแล้ว" แบบนี้"""
+    with Session(engine) as db:
+        record = db.get(models.ServiceAppointment, code)
+        record.date = day
+        db.add(record)
+        db.commit()
+
+
 def backdate(code: str, day: date) -> None:
     """เลื่อนวันนัดย้อนหลังตรงฐานข้อมูล — API ฝั่งลูกค้าจองย้อนหลังไม่ได้ จึงสร้างสถานะ "ถึงวันนัดแล้ว" แบบนี้"""
     with Session(engine) as db:
@@ -101,12 +124,8 @@ def test_overview_numbers_follow_new_records():
 
     headers = register("backoffice01")
     book_testdrive(headers, "chiangmai", "0899990001", set())
-    rsv = client.post("/api/reservations", headers=headers, json={
-        "car_id": "porsche-911", "color_id": "guards-red", "option_ids": [],
-        "name": "ทดสอบ หลังบ้าน", "phone": "0899990001", "email": "backoffice01@example.com",
-        "payment_method": "promptpay",
-    })
-    assert rsv.status_code == 201, rsv.text
+    rsv = pay_and_reserve(headers, "porsche-911", "guards-red", "0899990001",
+                          "backoffice01@example.com")
 
     after = client.get("/api/admin/overview", headers=admin).json()
     assert after["members"]["total"] == before["members"]["total"] + 1
@@ -114,7 +133,7 @@ def test_overview_numbers_follow_new_records():
     assert after["reservations"]["by_status"]["reserved"] == \
         before["reservations"]["by_status"].get("reserved", 0) + 1
     assert after["reservations"]["active_value"] == \
-        before["reservations"]["active_value"] + rsv.json()["total_price"]
+        before["reservations"]["active_value"] + rsv["total_price"]
     assert after["reservations"]["booking_fee_received"] > before["reservations"]["booking_fee_received"]
 
 
@@ -158,13 +177,8 @@ def test_testdrive_filters_and_pagination():
 def test_reservation_and_loan_lists_show_loan_status():
     admin = auth_header(ADMIN)
     headers = register("backoffice03", "0866660003")
-    rsv = client.post("/api/reservations", headers=headers, json={
-        "car_id": "ferrari-488", "color_id": "rosso-corsa", "option_ids": [],
-        "name": "ทดสอบ สินเชื่อ", "phone": "0866660003", "email": "backoffice03@example.com",
-        "payment_method": "card",
-    })
-    assert rsv.status_code == 201, rsv.text
-    code = rsv.json()["code"]
+    code = pay_and_reserve(headers, "ferrari-488", "rosso-corsa", "0866660003",
+                           "backoffice03@example.com", method="card")["code"]
 
     found = client.get("/api/admin/reservations", headers=admin, params={"q": code}).json()
     assert found["total"] == 1
@@ -268,7 +282,13 @@ def test_complete_service_appointment_frees_capacity_and_notifies():
     })
     assert booked.status_code == 201, booked.text
     code = booked.json()["code"]
-    day = date.fromisoformat(TOMORROW)
+
+    # ยังไม่ถึงวันนัด ปิดงานล่วงหน้าไม่ได้ (กติกาเดียวกับนัดทดลองขับ)
+    assert client.post(f"/api/admin/service-appointments/{code}/complete",
+                       headers=admin).status_code == 400
+
+    backdate_service(code, date.today())
+    day = date.today()
 
     with Session(engine) as db:
         before = _service_load(db, "rama3", day).get("16:30", 0)
