@@ -37,6 +37,7 @@ function renderTermChips() {
       renderResults();
     });
   });
+  bindRadioGroup(zone);
 }
 
 function renderResults() {

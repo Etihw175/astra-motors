@@ -68,7 +68,8 @@ function renderSwatches() {
       (c) => `
       <button type="button" class="swatch ${c.id === colorId ? "selected" : ""}"
               style="background:${c.hex}" data-id="${c.id}" role="radio"
-              aria-checked="${c.id === colorId}" aria-label="${c.name}"></button>`
+              aria-checked="${c.id === colorId}" aria-label="สี${c.name}${c.extra > 0 ? ` เพิ่ม ${baht(c.extra)}` : ""}"
+              title="${c.name}"></button>`
     )
     .join("");
   zone.querySelectorAll(".swatch").forEach((btn) => {
@@ -80,12 +81,15 @@ function renderSwatches() {
       renderPrice();
     });
   });
+  bindRadioGroup(zone);
 }
 
 function renderColorInfo() {
   const c = currentColor();
   // Edge case: สีที่เลือกไม่มีในสต็อก — แจ้งระยะเวลารอผลิตชัดเจน
-  document.getElementById("color-info").innerHTML =
+  const info = document.getElementById("color-info");
+  info.setAttribute("aria-live", "polite");
+  info.innerHTML =
     `<strong>${c.name}</strong>` +
     (c.extra > 0 ? ` <span class="muted small">(+${baht(c.extra)})</span>` : "") +
     ` &nbsp;${stockBadge(c.stock)}`;

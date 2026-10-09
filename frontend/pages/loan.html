@@ -7,20 +7,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container" style="max-width:760px">
       <div class="section-head">
         <p class="eyebrow">Journey 6/7 — ยื่นขอสินเชื่อ</p>
-        <h2>ยื่นไฟแนนซ์ออนไลน์ รู้ผลไว</h2>
+        <h1>ยื่นไฟแนนซ์ออนไลน์ รู้ผลไว</h1>
         <p>กรอกข้อมูลและแนบเอกสาร ระบบจะส่งเรื่องไปยังสถาบันการเงินและติดตามผลให้แบบเรียลไทม์</p>
       </div>
 
       <form id="ln-form" novalidate>
         <div class="card">
-          <h3>ใบจองที่ต้องการยื่นสินเชื่อ</h3>
+          <h2>ใบจองที่ต้องการยื่นสินเชื่อ</h2>
           <div class="field mt-2">
             <label for="ln-code">รหัสใบจอง</label>
             <input type="text" id="ln-code" placeholder="เช่น ADR-2609-7F3A9C" required list="my-codes" autocomplete="off">
@@ -32,7 +32,7 @@
         </div>
 
         <div class="card">
-          <h3>แผนสินเชื่อ</h3>
+          <h2>แผนสินเชื่อ</h2>
           <div class="field mt-2">
             <label for="ln-plan">สถาบันการเงิน</label>
             <select id="ln-plan"></select>
@@ -50,11 +50,11 @@
               <select id="ln-term"></select>
             </div>
           </div>
-          <div class="price-lines" id="ln-preview"></div>
+          <div class="price-lines" id="ln-preview" aria-live="polite"></div>
         </div>
 
         <div class="card">
-          <h3>ข้อมูลผู้ขอสินเชื่อ</h3>
+          <h2>ข้อมูลผู้ขอสินเชื่อ</h2>
           <div class="grid grid-2 mt-2">
             <div class="field">
               <label for="ln-name">ชื่อ-นามสกุล</label>
@@ -85,7 +85,7 @@
         </div>
 
         <div class="card">
-          <h3>เอกสารประกอบ <span class="muted small">(PDF / JPG / PNG ไม่เกิน 5 MB — อัปโหลดเข้าระบบจริง)</span></h3>
+          <h2>เอกสารประกอบ <span class="muted small">(PDF / JPG / PNG ไม่เกิน 5 MB — อัปโหลดเข้าระบบจริง)</span></h2>
           <div class="grid grid-2 mt-2">
             <div class="field">
               <label for="doc-id">สำเนาบัตรประชาชน</label>
@@ -108,9 +108,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/loan.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/loan.js?v=13"></script>
 </body>
 </html>

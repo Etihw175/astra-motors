@@ -9,9 +9,8 @@ if (Auth.isLoggedIn()) location.replace("/pages/profile.html");
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 let usernameAvailable = false;
 
-function setInvalid(id, invalid) {
-  document.getElementById(id).closest(".field").classList.toggle("invalid", invalid);
-}
+// setFieldInvalid (ui.js) ผูก aria-invalid + aria-describedby ให้ด้วย ไม่ให้เหลือแค่สีแดง
+const setInvalid = setFieldInvalid;
 
 function passwordOk(value) {
   return value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);

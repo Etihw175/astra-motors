@@ -7,55 +7,55 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Journey 3/7 — จองทดลองขับ</p>
-        <h2>เลือกโชว์รูมและเวลาที่สะดวก ไม่ต้องโทรศัพท์</h2>
+        <h1>เลือกโชว์รูมและเวลาที่สะดวก ไม่ต้องโทรศัพท์</h1>
         <p>เมื่อยืนยันแล้ว ระบบจะแจ้งโชว์รูมให้อัตโนมัติ และส่งการแจ้งเตือนก่อนถึงวันนัด</p>
       </div>
 
       <form id="td-form" novalidate>
         <div class="card">
-          <h3>1. เลือกรุ่นที่ต้องการทดลองขับ</h3>
+          <h2>1. เลือกรุ่นที่ต้องการทดลองขับ</h2>
           <div class="chip-row mt-2" id="car-chips" role="radiogroup" aria-label="เลือกรุ่นรถ"></div>
         </div>
 
         <div class="card">
-          <h3>2. เลือกโชว์รูมใกล้บ้าน</h3>
-          <div class="grid grid-2 mt-2" id="showroom-list"></div>
+          <h2>2. เลือกโชว์รูมใกล้บ้าน</h2>
+          <div class="grid grid-2 mt-2" id="showroom-list" role="group" aria-label="เลือกโชว์รูม"></div>
         </div>
 
         <div class="card">
-          <h3>3. เลือกวันและเวลา</h3>
+          <h2>3. เลือกวันและเวลา</h2>
           <div class="field mt-2" style="max-width:280px">
             <label for="td-date">วันที่นัด</label>
             <input type="date" id="td-date" required>
             <p class="hint">จองล่วงหน้าอย่างน้อย 1 วัน — วันที่ผ่านมาแล้วเลือกไม่ได้</p>
           </div>
           <div class="field">
-            <label>ช่วงเวลาว่าง</label>
-            <div class="chip-row" id="slot-chips" aria-live="polite">
+            <p class="field-label" id="slot-label">ช่วงเวลาว่าง</p>
+            <div class="chip-row" id="slot-chips" role="radiogroup" aria-labelledby="slot-label" aria-live="polite">
               <p class="muted small">เลือกโชว์รูมและวันที่ก่อน ระบบจะแสดงคิวว่างจริง</p>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <h3>4. ข้อมูลผู้ทดลองขับ</h3>
+          <h2>4. ข้อมูลผู้ทดลองขับ</h2>
           <div class="grid grid-2 mt-2">
             <div class="field">
               <label for="td-name">ชื่อ-นามสกุล</label>
               <input type="text" id="td-name" required autocomplete="name">
-              <p class="error">กรุณากรอกชื่อ-นามสกุล</p>
+              <p class="error" id="err-td-name">กรุณากรอกชื่อ-นามสกุล</p>
             </div>
             <div class="field">
               <label for="td-phone">เบอร์โทรศัพท์</label>
               <input type="tel" id="td-phone" required autocomplete="tel" inputmode="tel">
-              <p class="error">กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก</p>
+              <p class="error" id="err-td-phone">กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก</p>
             </div>
           </div>
           <label class="check">
@@ -76,9 +76,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/test-drive.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/test-drive.js?v=13"></script>
 </body>
 </html>

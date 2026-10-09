@@ -36,19 +36,8 @@ function badge(map, status) {
 
 /* ---------- แท็บ ---------- */
 
-document.querySelectorAll(".tabs button").forEach((btn) =>
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((b) => {
-      const on = b === btn;
-      b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", String(on));
-    });
-    document.querySelectorAll("[data-panel]").forEach((p) =>
-      p.classList.toggle("hidden", p.dataset.panel !== btn.dataset.tab)
-    );
-    TABLES[btn.dataset.tab].load();
-  })
-);
+// initTabs (ui.js) ดูแล aria-selected / aria-controls / roving tabindex / ลูกศรซ้าย-ขวาให้
+initTabs(document.querySelector(".tabs"), (name) => TABLES[name].load());
 
 /* ---------- ตัวเลขสรุป ---------- */
 
@@ -99,14 +88,17 @@ function makeTable({ prefix, colspan, unit, fetcher, filters, row, bind }) {
 
   async function load() {
     const tbody = document.getElementById(`${prefix}-rows`);
+    tbody.setAttribute("aria-busy", "true");
     tbody.innerHTML = `<tr><td colspan="${colspan}" class="muted">กำลังโหลด…</td></tr>`;
     let data;
     try {
       data = await fetcher({ ...filters(), page: view.page, per_page: view.per_page });
     } catch (err) {
       tbody.innerHTML = `<tr><td colspan="${colspan}" class="muted">${esc(err.message)}</td></tr>`;
+      tbody.setAttribute("aria-busy", "false");
       return;
     }
+    tbody.setAttribute("aria-busy", "false");
 
     tbody.innerHTML = data.items.length
       ? data.items.map(row).join("")
@@ -118,11 +110,13 @@ function makeTable({ prefix, colspan, unit, fetcher, filters, row, bind }) {
       `(หน้า ${data.page}/${data.total_pages})`;
 
     const pages = document.getElementById(`${prefix}-pages`);
-    let html = `<button ${data.page <= 1 ? "disabled" : ""} data-page="${data.page - 1}">ก่อนหน้า</button>`;
+    let html = `<button type="button" ${data.page <= 1 ? "disabled" : ""} data-page="${data.page - 1}">ก่อนหน้า</button>`;
     for (let p = 1; p <= data.total_pages; p++) {
-      html += `<button class="${p === data.page ? "active" : ""}" data-page="${p}">${p}</button>`;
+      const on = p === data.page;
+      html += `<button type="button" class="${on ? "active" : ""}" data-page="${p}"
+        aria-label="หน้า ${p}" ${on ? 'aria-current="page"' : ""}>${p}</button>`;
     }
-    html += `<button ${data.page >= data.total_pages ? "disabled" : ""} data-page="${data.page + 1}">ถัดไป</button>`;
+    html += `<button type="button" ${data.page >= data.total_pages ? "disabled" : ""} data-page="${data.page + 1}">ถัดไป</button>`;
     pages.innerHTML = html;
     pages.querySelectorAll("[data-page]").forEach((btn) =>
       btn.addEventListener("click", () => {

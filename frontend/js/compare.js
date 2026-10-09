@@ -27,11 +27,11 @@ function render() {
   const cars = selected.map((id) => allCars.find((c) => c.id === id));
 
   document.getElementById("head-row").innerHTML =
-    `<th class="row-label">รายการ</th>` +
+    `<th class="row-label" scope="col">รายการ</th>` +
     cars
       .map(
         (car, i) => `
-        <th>
+        <th scope="col">
           <select data-col="${i}" aria-label="เลือกรุ่นคอลัมน์ที่ ${i + 1}">
             ${allCars
               .map(
@@ -54,12 +54,13 @@ function render() {
     const cells = cars
       .map((c, i) => `<td class="${i === bestIdx ? "best" : ""}">${getText(c)}</td>`)
       .join("");
-    return `<tr><td class="row-label">${label}</td>${cells}</tr>`;
+    // ชื่อรายการเป็นหัวแถว ไม่ใช่ข้อมูล — ใช้ th scope="row" ให้โปรแกรมอ่านหน้าจออ่านคู่กับค่าในเซลล์
+    return `<tr><th class="row-label" scope="row">${label}</th>${cells}</tr>`;
   });
 
   // แถวปุ่มไปหน้าถัดไปของ journey
   bodyRows.push(
-    `<tr><td class="row-label"></td>` +
+    `<tr><th class="row-label" scope="row"><span class="sr-only">ไปขั้นตอนถัดไป</span></th>` +
       cars
         .map(
           (c) => `

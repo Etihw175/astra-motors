@@ -7,22 +7,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container" style="max-width:820px">
       <div class="section-head">
         <p class="eyebrow">Journey 6/7 — ติดตามสถานะ</p>
-        <h2>การจองของฉัน</h2>
+        <h1>การจองของฉัน</h1>
         <p>ทุกการจองที่ผูกกับบัญชีอยู่ที่นี่ — สถานะสินเชื่ออัปเดตเองแบบเรียลไทม์ และมีแจ้งเตือนที่กระดิ่งมุมขวาบน</p>
       </div>
 
       <div id="guest-zone"></div>
 
       <div id="member-zone" class="hidden">
-        <h3 class="mb-2">ใบจองรถ</h3>
-        <div id="rsv-list"></div>
+        <h2 class="mb-2" id="rsv-list-title">ใบจองรถ</h2>
+        <div id="rsv-list" role="group" aria-labelledby="rsv-list-title"></div>
 
         <details class="card mt-2" id="lookup-box">
           <summary class="small muted" style="cursor:pointer">ค้นหาด้วยรหัสใบจอง</summary>
@@ -35,33 +35,34 @@
           </div>
         </details>
 
-        <div id="rsv-zone" class="mt-2"></div>
+        <div id="rsv-zone" class="mt-2" aria-live="polite"></div>
 
-        <h3 class="mt-4 mb-2">นัดทดลองขับ</h3>
-        <div id="td-zone"></div>
+        <h2 class="mt-4 mb-2">นัดทดลองขับ</h2>
+        <div id="td-zone" aria-live="polite"></div>
 
-        <h3 class="mt-4 mb-2">นัดเข้าศูนย์บริการ</h3>
-        <div id="sv-zone"></div>
+        <h2 class="mt-4 mb-2">นัดเข้าศูนย์บริการ</h2>
+        <div id="sv-zone" aria-live="polite"></div>
       </div>
     </div>
   </main>
 
   <!-- Modal ยืนยันยกเลิกใบจอง -->
-  <div class="modal-backdrop" id="cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+  <div class="modal-backdrop" id="cancel-modal" role="dialog" aria-modal="true"
+       aria-labelledby="cancel-title" aria-describedby="cancel-desc" hidden>
     <div class="modal">
-      <h3 id="cancel-title">ยืนยันยกเลิกใบจอง?</h3>
-      <p>ยกเลิกภายใน 7 วันหลังจอง ได้รับเงินจองคืนเต็มจำนวน (5-7 วันทำการ)
+      <h2 id="cancel-title">ยืนยันยกเลิกใบจอง?</h2>
+      <p id="cancel-desc">ยกเลิกภายใน 7 วันหลังจอง ได้รับเงินจองคืนเต็มจำนวน (5-7 วันทำการ)
       หลังจากนั้นได้รับคืน 50% ตามเงื่อนไข การยกเลิกไม่สามารถย้อนกลับได้</p>
       <div class="actions">
-        <button class="btn btn-ghost" id="cancel-no">เก็บใบจองไว้</button>
-        <button class="btn btn-danger" id="cancel-yes">ยืนยันยกเลิก</button>
+        <button type="button" class="btn btn-ghost" id="cancel-no">เก็บใบจองไว้</button>
+        <button type="button" class="btn btn-danger" id="cancel-yes">ยืนยันยกเลิก</button>
       </div>
     </div>
   </div>
 
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/status.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/status.js?v=13"></script>
 </body>
 </html>

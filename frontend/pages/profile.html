@@ -7,18 +7,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">บัญชีสมาชิก</p>
-        <h2 id="pf-title">บัญชีของฉัน</h2>
+        <h1 id="pf-title">บัญชีของฉัน</h1>
         <p id="pf-subtitle">แก้ไขข้อมูลติดต่อและรหัสผ่านของคุณ ข้อมูลนี้ใช้ยืนยันตัวตนตอนรับรถ</p>
       </div>
 
-      <div class="tabs" role="tablist">
+      <div class="tabs" role="tablist" aria-label="เมนูบัญชีของฉัน">
         <button type="button" class="active" data-tab="info" role="tab">ข้อมูลส่วนตัว</button>
         <button type="button" data-tab="password" role="tab">เปลี่ยนรหัสผ่าน</button>
         <!-- แท็บนี้ซ่อนไว้ แสดงเฉพาะบัญชี role = admin -->
@@ -27,6 +27,7 @@
 
       <!-- ---------- แท็บ 1: ข้อมูลส่วนตัว (GET /api/me, PUT /api/users/{id}) ---------- -->
       <section data-panel="info">
+        <h2 class="sr-only">ข้อมูลส่วนตัว</h2>
         <form id="pf-form" class="card" novalidate>
           <div class="grid grid-2">
             <div class="field">
@@ -66,6 +67,7 @@
 
       <!-- ---------- แท็บ 2: เปลี่ยนรหัสผ่าน (POST /api/change-password) ---------- -->
       <section data-panel="password" class="hidden">
+        <h2 class="sr-only">เปลี่ยนรหัสผ่าน</h2>
         <form id="pw-form" class="card auth-shell" novalidate>
           <div class="field">
             <label for="pw-current">รหัสผ่านปัจจุบัน</label>
@@ -90,6 +92,7 @@
 
       <!-- ---------- แท็บ 3: จัดการผู้ใช้ เฉพาะ admin (GET /api/users?page=) ---------- -->
       <section data-panel="users" class="hidden">
+        <h2 class="sr-only">จัดการผู้ใช้</h2>
         <div class="card">
           <div class="grid grid-2">
             <div class="field">
@@ -108,29 +111,31 @@
         </div>
 
         <div class="card">
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0" role="group" aria-label="ตารางบัญชีผู้ใช้ (เลื่อนแนวนอนได้)">
             <table class="user-table">
+              <caption class="sr-only">รายชื่อบัญชีผู้ใช้ทั้งหมดในระบบ</caption>
               <thead>
                 <tr>
-                  <th>ID</th><th>Username</th><th>ชื่อ-นามสกุล</th>
-                  <th>อีเมล</th><th>สิทธิ์</th><th>สถานะ</th><th></th>
+                  <th scope="col">ID</th><th scope="col">Username</th><th scope="col">ชื่อ-นามสกุล</th>
+                  <th scope="col">อีเมล</th><th scope="col">สิทธิ์</th><th scope="col">สถานะ</th>
+                  <th scope="col"><span class="sr-only">การจัดการ</span></th>
                 </tr>
               </thead>
-              <tbody id="us-rows"></tbody>
+              <tbody id="us-rows" aria-live="polite" aria-busy="false"></tbody>
             </table>
           </div>
           <div class="pager">
-            <span class="muted small" id="us-summary"></span>
-            <div class="pages" id="us-pages"></div>
+            <span class="muted small" id="us-summary" aria-live="polite"></span>
+            <nav class="pages" id="us-pages" aria-label="แบ่งหน้า"></nav>
           </div>
         </div>
       </section>
     </div>
   </main>
 
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/profile.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/profile.js?v=13"></script>
 </body>
 </html>

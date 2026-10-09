@@ -7,14 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Journey 2/7 — เครื่องคำนวณไฟแนนซ์</p>
-        <h2>ลองคำนวณค่างวดก่อนตัดสินใจ</h2>
+        <h1>ลองคำนวณค่างวดก่อนตัดสินใจ</h1>
         <p>เทียบยอดผ่อนจากหลายสถาบันการเงินพร้อมกัน — แผนที่จางลงคือแผนที่เงื่อนไขยังไม่ผ่านพร้อมเหตุผล</p>
       </div>
 
@@ -35,16 +35,17 @@
           </div>
 
           <div class="field">
-            <label>ระยะเวลาผ่อน</label>
-            <div class="chip-row" id="term-chips" role="radiogroup" aria-label="เลือกจำนวนงวด"></div>
+            <p class="field-label" id="term-label">ระยะเวลาผ่อน</p>
+            <div class="chip-row" id="term-chips" role="radiogroup" aria-labelledby="term-label"></div>
           </div>
 
-          <div class="price-lines mt-3" id="loan-summary"></div>
+          <div class="price-lines mt-3" id="loan-summary" aria-live="polite"></div>
         </div>
 
         <!-- ฝั่งขวา: ผลลัพธ์ต่อแผนสินเชื่อ -->
         <div>
-          <div id="plan-list"></div>
+          <h2 class="sr-only">ผลการคำนวณค่างวดแต่ละแผนสินเชื่อ</h2>
+          <div id="plan-list" aria-live="polite"></div>
           <p class="muted small mt-2">
             * ยอดผ่อนคำนวณจากอัตราดอกเบี้ยคงที่ (flat rate) เป็นการประมาณการเท่านั้น
             ผลอนุมัติและเงื่อนไขจริงขึ้นอยู่กับการพิจารณาของสถาบันการเงิน
@@ -58,9 +59,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/finance.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/finance.js?v=13"></script>
 </body>
 </html>

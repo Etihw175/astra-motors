@@ -7,18 +7,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container">
-      <div id="loading" class="muted">กำลังโหลดข้อมูลรถ…</div>
+      <div id="loading" class="muted" role="status" aria-live="polite">กำลังโหลดข้อมูลรถ…</div>
 
       <div class="detail-layout hidden" id="detail">
         <!-- ฝั่งซ้าย: ภาพรถเปลี่ยนสีตามที่เลือก + สเปคย่อ -->
         <div class="detail-visual">
           <p class="eyebrow" id="car-body-type"></p>
-          <h2 id="car-name" style="font-size:clamp(26px,3.6vw,40px)"></h2>
+          <h1 id="car-name" style="font-size:clamp(26px,3.6vw,40px)"></h1>
           <p class="muted" id="car-tagline"></p>
           <div id="car-visual" class="mt-2" style="filter:drop-shadow(0 24px 32px rgba(0,0,0,.5))"></div>
           <div class="mt-2">
@@ -31,14 +31,14 @@
         <!-- ฝั่งขวา: ออปชัน + ราคา real-time + โปรโมชั่น -->
         <div>
           <div class="card">
-            <h3>ออปชันเสริม</h3>
+            <h2>ออปชันเสริม</h2>
             <p class="muted small">ราคาด้านล่างอัปเดตทันทีเมื่อเลือก</p>
             <div id="options" class="mt-1"></div>
           </div>
 
           <div class="card">
-            <h3 class="mb-2">สรุปราคา</h3>
-            <div class="price-lines" id="price-lines"></div>
+            <h2 class="mb-2">สรุปราคา</h2>
+            <div class="price-lines" id="price-lines" aria-live="polite"></div>
             <p class="muted small mt-2">
               ราคาอัปเดตล่าสุดวันนี้ อาจเปลี่ยนแปลงได้จนกว่าจะออกใบจอง —
               เมื่อวางเงินจอง ระบบจะล็อกราคานี้ให้ 14 วัน
@@ -80,9 +80,9 @@
 
   <!-- ตัวแสดงโมเดล 3D (หมุนดู 360°) — ใช้เมื่อมีไฟล์ .glb ใน /assets/models/ -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/model.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/model.js?v=13"></script>
 </body>
 </html>

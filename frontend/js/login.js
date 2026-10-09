@@ -4,9 +4,8 @@
 renderHeader("login");
 renderFooter();
 
-function setInvalid(id, invalid) {
-  document.getElementById(id).closest(".field").classList.toggle("invalid", invalid);
-}
+// setFieldInvalid (ui.js) ผูก aria-invalid + aria-describedby ให้ด้วย ไม่ให้เหลือแค่สีแดง
+const setInvalid = setFieldInvalid;
 
 // ล็อกอินอยู่แล้วไม่ต้องกรอกซ้ำ — ส่งไปหน้าโปรไฟล์เลย
 if (Auth.isLoggedIn()) {

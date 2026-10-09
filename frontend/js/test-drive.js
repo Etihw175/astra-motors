@@ -25,6 +25,7 @@ function renderCarChips() {
       renderCarChips();
     });
   });
+  bindRadioGroup(zone);
 }
 
 function renderShowrooms() {
@@ -34,7 +35,7 @@ function renderShowrooms() {
       (s) => `
       <div class="showroom-card ${s.id === showroomId ? "selected" : ""}" data-id="${s.id}"
            role="button" tabindex="0" aria-pressed="${s.id === showroomId}">
-        <h4>${s.name}</h4>
+        <h3>${s.name}</h3>
         <p>${s.address}</p>
         <p class="num">${s.hours} · โทร ${s.phone}</p>
       </div>`
@@ -66,23 +67,23 @@ async function loadSlots() {
       .map(
         (s) => `
         <button type="button" class="chip" data-time="${s.time}" ${s.available ? "" : "disabled"}
-                aria-label="${s.time} ${s.available ? "ว่าง" : "ถูกจองแล้ว"}">${s.time}</button>`
+                role="radio" aria-checked="false"
+                aria-label="${s.time} น. ${s.available ? "ว่าง" : "ถูกจองแล้ว"}">${s.time}</button>`
       )
       .join("");
     zone.querySelectorAll(".chip:not(:disabled)").forEach((chip) => {
       chip.addEventListener("click", () => {
         selectedTime = chip.dataset.time;
-        zone.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
-        chip.classList.add("selected");
+        zone.querySelectorAll(".chip").forEach((c) => {
+          c.classList.toggle("selected", c === chip);
+          c.setAttribute("aria-checked", String(c === chip));
+        });
       });
     });
+    bindRadioGroup(zone);
   } catch (err) {
     zone.innerHTML = `<p class="muted small">${err.message}</p>`;
   }
-}
-
-function setInvalid(fieldId, invalid) {
-  document.getElementById(fieldId).closest(".field").classList.toggle("invalid", invalid);
 }
 
 async function submit(e) {
@@ -92,8 +93,8 @@ async function submit(e) {
   const date = document.getElementById("td-date").value;
 
   // validate ฝั่งหน้าเว็บก่อน แล้ว backend จะ validate ซ้ำอีกชั้น
-  setInvalid("td-name", name.length < 2);
-  setInvalid("td-phone", phone.replace(/\D/g, "").length < 9);
+  setFieldInvalid("td-name", name.length < 2);
+  setFieldInvalid("td-phone", phone.replace(/\D/g, "").length < 9);
   if (!carId) return toast("กรุณาเลือกรุ่นรถ", "error");
   if (!showroomId) return toast("กรุณาเลือกโชว์รูม", "error");
   if (!date) return toast("กรุณาเลือกวันที่นัด", "error");

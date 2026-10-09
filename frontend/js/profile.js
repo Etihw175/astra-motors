@@ -11,20 +11,14 @@ const ROLE_LABEL = { admin: "ผู้ดูแลระบบ (admin)", custome
 let me = null;
 const usersView = { page: 1, perPage: 5, q: "", role: "" };
 
-function setInvalid(id, invalid) {
-  document.getElementById(id).closest(".field").classList.toggle("invalid", invalid);
-}
+// setFieldInvalid (ui.js) ผูก aria-invalid + aria-describedby ให้ด้วย
+const setInvalid = setFieldInvalid;
 
 /* ---------- แท็บ ---------- */
 
-document.querySelectorAll(".tabs button").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
-    document.querySelectorAll("[data-panel]").forEach((panel) => {
-      panel.classList.toggle("hidden", panel.dataset.panel !== btn.dataset.tab);
-    });
-    if (btn.dataset.tab === "users") loadUsers();
-  });
+// initTabs (ui.js) ดูแล aria-selected / aria-controls / roving tabindex / ลูกศรซ้าย-ขวาให้
+initTabs(document.querySelector(".tabs"), (name) => {
+  if (name === "users") loadUsers();
 });
 
 /* ---------- แท็บ 1: ข้อมูลส่วนตัว ---------- */
@@ -120,6 +114,7 @@ function badgeFor(user) {
 
 async function loadUsers() {
   const tbody = document.getElementById("us-rows");
+  tbody.setAttribute("aria-busy", "true");
   tbody.innerHTML = '<tr><td colspan="7" class="muted">กำลังโหลด...</td></tr>';
 
   try {
@@ -139,10 +134,12 @@ async function loadUsers() {
           <td>${badgeFor(u)}</td>
           <td>
             <div class="row-actions">
-              <button class="btn btn-ghost btn-sm" data-toggle="${u.id}" data-active="${u.is_active}">
+              <button type="button" class="btn btn-ghost btn-sm" data-toggle="${u.id}" data-active="${u.is_active}"
+                aria-label="${u.is_active ? "ระงับ" : "เปิดใช้"}บัญชี ${esc(u.username)}">
                 ${u.is_active ? "ระงับ" : "เปิดใช้"}
               </button>
-              <button class="btn btn-danger btn-sm" data-delete="${u.id}" data-name="${u.username}"
+              <button type="button" class="btn btn-danger btn-sm" data-delete="${u.id}" data-name="${esc(u.username)}"
+                aria-label="ลบบัญชี ${esc(u.username)}"
                 ${u.id === me.id ? "disabled title='ลบบัญชีของตัวเองไม่ได้'" : ""}>ลบ</button>
             </div>
           </td>
@@ -158,17 +155,21 @@ async function loadUsers() {
     renderPager(data);
     bindRowActions();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="muted">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">${esc(err.message)}</td></tr>`;
+  } finally {
+    tbody.setAttribute("aria-busy", "false");
   }
 }
 
 function renderPager(data) {
   const pages = document.getElementById("us-pages");
-  let html = `<button ${data.page <= 1 ? "disabled" : ""} data-page="${data.page - 1}">ก่อนหน้า</button>`;
+  let html = `<button type="button" ${data.page <= 1 ? "disabled" : ""} data-page="${data.page - 1}">ก่อนหน้า</button>`;
   for (let p = 1; p <= data.total_pages; p++) {
-    html += `<button class="${p === data.page ? "active" : ""}" data-page="${p}">${p}</button>`;
+    const on = p === data.page;
+    html += `<button type="button" class="${on ? "active" : ""}" data-page="${p}"
+      aria-label="หน้า ${p}" ${on ? 'aria-current="page"' : ""}>${p}</button>`;
   }
-  html += `<button ${data.page >= data.total_pages ? "disabled" : ""} data-page="${data.page + 1}">ถัดไป</button>`;
+  html += `<button type="button" ${data.page >= data.total_pages ? "disabled" : ""} data-page="${data.page + 1}">ถัดไป</button>`;
   pages.innerHTML = html;
 
   pages.querySelectorAll("[data-page]").forEach((btn) => {

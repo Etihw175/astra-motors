@@ -9,6 +9,8 @@
   --surface: #151c25;
   --surface-2: #1c2530;
   --line: #2a3542;
+  /* เส้นขอบของช่องกรอก/ชิป ต้องเข้มกว่าเส้นตกแต่งทั่วไป ให้ได้คอนทราสต์ ≥ 3:1 ตาม WCAG 1.4.11 */
+  --field-border: #616e7d;
   --text: #e9eef4;
   --text-dim: #9aa7b4;
   --accent: #d2803c;         /* ทองแดงขัดเงา */
@@ -18,6 +20,8 @@
   --ok: #58b98b;
   --warn: #e0b84c;
   --bad: #e06060;
+  /* สีแดงสำหรับ "ตัวอักษร" บนพื้นอ่อน (badge/ข้อความ error) — #e06060 ได้แค่ 4.16:1 จึงอ่อนเกินเกณฑ์ */
+  --bad-soft: #e87878;
   --radius: 14px;
   --radius-sm: 9px;
   --font-display: "Kanit", sans-serif;
@@ -62,16 +66,58 @@ h1, h2, h3, h4 {
 
 .num { font-family: var(--font-data); font-weight: 600; letter-spacing: 0.02em; }
 
+/* วงแหวนโฟกัส: ต้องหนาและมีขอบดำคั่น เพราะพื้นหลังเข้ม วงบางสีทองแดงจะกลืนไปกับขอบการ์ด */
 :focus-visible {
-  outline: 2px solid var(--accent-strong);
+  outline: 3px solid var(--accent-strong);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
+/* ซ่อนจากตา แต่ยังอ่านได้ด้วยโปรแกรมอ่านหน้าจอ (ใช้กับ caption ของตาราง ฯลฯ) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ลิงก์ข้ามไปเนื้อหาหลัก — ซ่อนไว้จนกดปุ่ม Tab ครั้งแรก */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 200;
+  transform: translateY(-200%);
+  padding: 12px 20px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.skip-link:focus { transform: none; text-decoration: none; }
+
+/* main ถูกโฟกัสด้วยสคริปต์ (tabindex="-1") จึงไม่ต้องขึ้นวงแหวนให้รกตา */
+main:focus { outline: none; }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
   html { scroll-behavior: auto; }
-  .rise { opacity: 1 !important; transform: none !important; }
+  /* เอฟเฟกต์เข้าทั้งสองแบบต้องโผล่มาเต็มที่ ไม่ใช่ค้างที่ opacity: 0 */
+  .rise, .reveal { opacity: 1 !important; transform: none !important; }
+  .skip-link:focus { transform: none !important; }
 }
 
 /* ---------- Layout ---------- */
@@ -86,7 +132,7 @@ h1, h2, h3, h4 {
   color: var(--accent-strong);
   margin-bottom: var(--space-1);
 }
-.section-head h2 { font-size: clamp(24px, 3.4vw, 34px); }
+.section-head h1, .section-head h2 { font-size: clamp(24px, 3.4vw, 34px); }
 .section-head p { color: var(--text-dim); margin-top: 6px; max-width: 60ch; }
 
 /* ---------- Header ---------- */
@@ -150,7 +196,7 @@ h1, h2, h3, h4 {
 .btn-primary:hover { background: var(--accent-strong); }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent-strong); }
-.btn-danger { background: transparent; color: var(--bad); border-color: rgba(224, 96, 96, 0.4); }
+.btn-danger { background: transparent; color: var(--bad-soft); border-color: rgba(232, 120, 120, 0.55); }
 .btn-danger:hover { background: rgba(224, 96, 96, 0.12); }
 .btn-block { width: 100%; }
 
@@ -235,9 +281,10 @@ thead th {
   position: sticky;
   top: 0;
 }
-tbody tr:last-child td { border-bottom: none; }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: none; }
 td.best { color: var(--accent-strong); font-weight: 600; }
 tr.dim td { color: var(--text-dim); opacity: 0.55; }
+tbody th.row-label { font-weight: 500; }
 .row-label { color: var(--text-dim); font-size: 14px; white-space: nowrap; }
 
 /* ---------- Badges ---------- */
@@ -253,16 +300,22 @@ tr.dim td { color: var(--text-dim); opacity: 0.55; }
 }
 .badge-ok { background: rgba(88, 185, 139, 0.14); color: var(--ok); }
 .badge-warn { background: rgba(224, 184, 76, 0.14); color: var(--warn); }
-.badge-bad { background: rgba(224, 96, 96, 0.14); color: var(--bad); }
+.badge-bad { background: rgba(224, 96, 96, 0.14); color: var(--bad-soft); }
 .badge-accent { background: var(--accent-soft); color: var(--accent-strong); }
 
 /* ---------- Forms ---------- */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--space-2); }
-.field > label { font-weight: 500; font-size: 15px; }
+.field > label, .field > .field-label { font-weight: 500; font-size: 15px; }
 .field .hint { color: var(--text-dim); font-size: 13px; }
-.field .error { color: var(--bad); font-size: 13px; display: none; }
-.field.invalid .error { display: block; }
-.field.invalid input, .field.invalid select { border-color: var(--bad); }
+.field .error { color: var(--bad-soft); font-size: 13px; display: none; }
+.field.invalid .error { display: flex; gap: 6px; align-items: flex-start; }
+/* ไอคอน + คำว่า "ผิดพลาด" ทำให้รู้ว่าเป็นข้อผิดพลาดแม้มองไม่เห็นสี */
+.field.invalid .error::before {
+  content: "⚠ ผิดพลาด:";
+  flex: none;
+  font-weight: 600;
+}
+.field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--bad-soft); }
 
 input[type="text"], input[type="tel"], input[type="email"], input[type="number"],
 input[type="password"], input[type="search"], input[type="date"], input[type="file"], select {
@@ -271,7 +324,7 @@ input[type="password"], input[type="search"], input[type="date"], input[type="fi
   padding: 10px 14px;
   background: var(--surface-2);
   color: var(--text);
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-body);
   font-size: 16px;
@@ -314,7 +367,7 @@ input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); cu
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-border);
   background: var(--surface-2);
   color: var(--text);
   font-family: var(--font-data);
@@ -332,7 +385,7 @@ input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); cu
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 2px solid var(--line);
+  border: 2px solid var(--field-border);
   cursor: pointer;
   padding: 0;
   transition: transform 0.15s ease, border-color 0.15s ease;
@@ -818,6 +871,7 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.022); }
   font: inherit;
   font-weight: 500;
   padding: 10px 14px;
+  min-height: 44px;
   cursor: pointer;
 }
 .tabs button:hover { color: var(--text); }
@@ -1053,7 +1107,7 @@ textarea {
   padding: 10px 14px;
   background: var(--surface-2);
   color: var(--text);
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-body);
   font-size: 16px;
@@ -1093,7 +1147,7 @@ textarea:focus { border-color: var(--accent); outline: none; }
 .list-row .main b { font-weight: 600; }
 .list-row .main span { font-size: 13.5px; color: var(--text-dim); }
 .pts-plus { color: var(--ok); font-family: var(--font-data); font-weight: 600; }
-.pts-minus { color: var(--bad); font-family: var(--font-data); font-weight: 600; }
+.pts-minus { color: var(--bad-soft); font-family: var(--font-data); font-weight: 600; }
 
 .reward-row .btn { min-height: 38px; padding: 0 16px; font-size: 14px; }
 
@@ -1141,3 +1195,58 @@ textarea:focus { border-color: var(--accent); outline: none; }
 #ad-body .user-table { font-size: 13px; }
 #ad-body .user-table th, #ad-body .user-table td { padding: 10px 11px; vertical-align: top; }
 #ad-body .user-table .row-actions { flex-wrap: wrap; }
+
+/* =========================================================
+   รอบตรวจการเข้าถึง (accessibility pass) — ดู docs/ACCESSIBILITY.md
+   ========================================================= */
+
+/* ปุ่มกระดิ่ง/ปุ่มไอคอนต้องมีเป้าแตะ 44px ตาม WCAG 2.5.8 */
+.bell { min-width: 44px; min-height: 44px; }
+@media (max-width: 600px) {
+  .auth-zone .bell { width: 44px; height: 44px; }
+}
+
+/* ปุ่มเล็กในตาราง/การ์ด: 38px เตี้ยกว่าเกณฑ์ ขยายเป็น 44px บนจอสัมผัส */
+@media (pointer: coarse) {
+  .btn-sm, .pager .pages button, .reward-row .btn { min-height: 44px; }
+  .pager .pages button { min-width: 44px; }
+}
+
+/* การ์ดที่กดได้ (โชว์รูม / ใบจอง) โฟกัสด้วยคีย์บอร์ดต้องเห็นชัดทั้งกรอบ */
+.showroom-card:focus-visible, .booking-pick:focus-visible { outline-offset: 3px; }
+
+/* ปิดการเลื่อนพื้นหลังตอนเปิด modal — กันโฟกัส/สกรอลล์หลุดไปหลังฉาก */
+body.modal-open { overflow: hidden; }
+
+/* [hidden] ต้องชนะ display ของคลาสอื่นเสมอ (modal ใช้ hidden คุมการเข้าถึง) */
+[hidden] { display: none !important; }
+
+/* ตารางที่กว้างกว่าจอ: ต้องเลื่อนในกรอบของตัวเอง ไม่ทำให้ทั้งหน้าเลื่อนแนวนอน */
+.table-wrap { max-width: 100%; -webkit-overflow-scrolling: touch; }
+.table-wrap:focus-visible { outline-offset: 0; }
+
+/* จอแคบสุดที่รองรับ 360px: ห้ามมีสกรอลล์แนวนอนของหน้า */
+/* แถบบนสุดที่จอแคบ: ให้ขึ้นบรรทัดใหม่ ไม่ให้ปุ่ม "สมัครสมาชิก" ถูกดันออกนอกจอจนกดไม่ได้ */
+@media (max-width: 720px) {
+  .site-header .bar { flex-wrap: wrap; row-gap: 6px; padding-block: 8px; min-height: 0; }
+  .site-nav { order: 3; width: 100%; margin-left: 0; }
+  .auth-zone { margin-left: auto; }
+}
+
+@media (max-width: 420px) {
+  html, body { overflow-x: hidden; }
+  /* .container กว้าง 100% - 40px อยู่แล้ว = ขอบข้าง 20px ซึ่งเกิน 16px ตามที่ต้องการ */
+  .section-head h1, .section-head h2 { font-size: 23px; }
+  .tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { white-space: nowrap; }
+  .modal .actions { flex-direction: column-reverse; }
+  .modal .actions .btn { width: 100%; }
+  .pager { justify-content: flex-start; }
+  .pager .pages { flex-wrap: wrap; }
+  /* จอมือถือถือว่าเป็นการแตะ — ทุกเป้าต้องสูง 44px */
+  .btn-sm, .car-card .actions .btn, .pager .pages button, .reward-row .btn,
+  .auth-zone .btn, .link-btn { min-height: 44px; }
+  .pager .pages button { min-width: 44px; }
+  .link-btn { display: inline-flex; align-items: center; }
+}

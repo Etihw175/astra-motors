@@ -186,7 +186,9 @@ function renderReservationList() {
     .map(
       (r) => `
       <div class="card booking-pick ${reservation && reservation.code === r.code ? "selected" : ""}"
-           data-code="${r.code}" role="button" tabindex="0" aria-label="ดูใบจอง ${r.code}">
+           data-code="${r.code}" role="button" tabindex="0"
+           aria-pressed="${Boolean(reservation && reservation.code === r.code)}"
+           aria-label="ดูใบจอง ${r.code} — ${esc(r.car.name)}">
         <div class="list-row" style="padding:0;border:none">
           <div class="main">
             <b>${esc(r.car.name)} <span class="muted" style="font-weight:400">สี${esc(r.color.name)}</span></b>
@@ -287,14 +289,14 @@ function renderGuest() {
   const td = Store.load("testdrive");
   zone.innerHTML = `
     <div class="card">
-      <h3>เข้าสู่ระบบเพื่อดูการจองทั้งหมด</h3>
+      <h2>เข้าสู่ระบบเพื่อดูการจองทั้งหมด</h2>
       <p class="muted mt-1">ใบจองรถ สถานะสินเชื่อ และแจ้งเตือนผูกกับบัญชีของคุณ เพื่อความปลอดภัยของข้อมูลส่วนตัว</p>
       <div class="mt-2" style="display:flex;gap:12px;flex-wrap:wrap">
         <a class="btn btn-primary" href="/pages/login.html?next=${encodeURIComponent(location.pathname + location.search)}">เข้าสู่ระบบ</a>
         <a class="btn btn-ghost" href="/pages/register.html">สมัครสมาชิก</a>
       </div>
     </div>
-    ${td ? `<h3 class="mt-3 mb-2">นัดทดลองขับที่จองจากเครื่องนี้</h3><div class="card list-rows" id="guest-td">${testdriveRow(td)}</div>` : ""}`;
+    ${td ? `<h2 class="mt-3 mb-2">นัดทดลองขับที่จองจากเครื่องนี้</h2><div class="card list-rows" id="guest-td">${testdriveRow(td)}</div>` : ""}`;
   const box = document.getElementById("guest-td");
   if (box) {
     bindTestdriveCancel(box, (updated) => {
@@ -348,9 +350,48 @@ async function loadReservation(code) {
 
 /* ---------- Modal ยกเลิก ---------- */
 
+const modal = document.getElementById("cancel-modal");
+let modalOpener = null;   // ปุ่มที่เปิด modal — ปิดแล้วต้องคืนโฟกัสกลับไปที่นี่
+
 function toggleModal(open) {
-  document.getElementById("cancel-modal").classList.toggle("open", open);
+  if (open) modalOpener = document.activeElement;
+  // hidden คุมทั้งการแสดงผลและการเข้าถึง: ตอนปิด เนื้อหาใน modal จะไม่อยู่ในลำดับ Tab เลย
+  modal.hidden = !open;
+  modal.classList.toggle("open", open);
+  document.body.classList.toggle("modal-open", open);
+  if (open) {
+    document.getElementById("cancel-no").focus();   // เริ่มที่ตัวเลือกที่ปลอดภัยที่สุด
+  } else if (modalOpener && document.contains(modalOpener)) {
+    modalOpener.focus();
+    modalOpener = null;
+  }
 }
+
+// Escape ปิด + Tab วนอยู่แค่ภายใน modal (focus trap) ตาม WCAG 2.1.2 No Keyboard Trap
+modal.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    toggleModal(false);
+    return;
+  }
+  if (e.key !== "Tab") return;
+  const stops = [...modal.querySelectorAll("button:not(:disabled)")];
+  if (!stops.length) return;
+  const first = stops[0];
+  const last = stops[stops.length - 1];
+  if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  } else if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  }
+});
+
+// คลิกพื้นหลังมืดถือว่าปิด (เท่ากับปุ่ม "เก็บใบจองไว้")
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) toggleModal(false);
+});
 
 document.getElementById("cancel-no").addEventListener("click", () => toggleModal(false));
 document.getElementById("cancel-yes").addEventListener("click", async () => {

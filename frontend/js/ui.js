@@ -22,9 +22,14 @@ function renderHeader(activeKey) {
     (i) =>
       `<a href="${i.href}" ${i.key === activeKey ? 'class="active" aria-current="page"' : ""}>${i.label}</a>`
   ).join("");
+  // ลิงก์ข้ามเมนู: ผู้ใช้คีย์บอร์ดกด Tab ครั้งแรกแล้วกระโดดเข้าเนื้อหาหลักได้เลย
+  // ทุกหน้ามี <main id="main-content" tabindex="-1"> เป็นเป้าหมาย
+  const main = document.getElementById("main-content");
+  if (main && !main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
   document.body.insertAdjacentHTML(
     "afterbegin",
-    `<header class="site-header">
+    `<a class="skip-link" href="#main-content">ข้ามไปที่เนื้อหาหลัก</a>
+     <header class="site-header">
        <div class="container bar">
          <a class="brand" href="/">ASTRA<span class="tick">/</span>MOTORS</a>
          <nav class="site-nav" aria-label="เมนูหลัก">${nav}</nav>
@@ -53,8 +58,8 @@ function renderAuthZone(activeKey) {
   zone.innerHTML = `
     <div class="bell-wrap">
       <button class="bell" id="bell" type="button" aria-haspopup="true" aria-expanded="false"
-              aria-label="แจ้งเตือน">
-        ${ICONS.bell}<span class="bell-count hidden" id="bell-count">0</span>
+              aria-controls="bell-panel" aria-label="แจ้งเตือน">
+        ${ICONS.bell}<span class="bell-count hidden" id="bell-count" aria-hidden="true">0</span>
       </button>
       <div class="bell-panel hidden" id="bell-panel" role="dialog" aria-label="แจ้งเตือนของฉัน"></div>
     </div>
@@ -111,6 +116,9 @@ function _setBellCount(n) {
   if (!badge) return;
   badge.textContent = n > 9 ? "9+" : String(n);
   badge.classList.toggle("hidden", !n);
+  // ตัวเลขบนกระดิ่งเป็น aria-hidden — ใส่ความหมายไว้ใน aria-label ของปุ่มแทน
+  const bell = document.getElementById("bell");
+  if (bell) bell.setAttribute("aria-label", n ? `แจ้งเตือน — ยังไม่ได้อ่าน ${n} รายการ` : "แจ้งเตือน");
 }
 
 async function _renderBellPanel() {
@@ -260,13 +268,16 @@ function initBell() {
     if (open) _renderBellPanel();
   });
   document.addEventListener("click", (e) => {
-    if (!panel.contains(e.target)) {
+    if (!panel.contains(e.target) && e.target !== bell) {
       panel.classList.add("hidden");
       bell.setAttribute("aria-expanded", "false");
     }
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") panel.classList.add("hidden");
+    if (e.key !== "Escape" || panel.classList.contains("hidden")) return;
+    panel.classList.add("hidden");
+    bell.setAttribute("aria-expanded", "false");
+    bell.focus();   // ปิดแล้วโฟกัสต้องกลับมาที่ปุ่มที่เปิด ไม่หลุดไปต้นหน้า
   });
   if (!_bellUnloadHooked) {
     // ปิดสตรีมเมื่อออกจากหน้า — ไม่งั้นเซิร์ฟเวอร์ถือ connection ค้างไว้
@@ -279,6 +290,136 @@ function initBell() {
   } else {
     _startBellPoll();                // เบราว์เซอร์เก่าไม่รองรับ SSE — ใช้ poll อย่างเดิม
   }
+}
+
+/* ---------- แท็บแบบ ARIA (ใช้ร่วมกัน: โปรไฟล์ / หลังการขาย / หลังบ้าน) ----------
+   ตาม WAI-ARIA tabs pattern: ในกลุ่มแท็บมีปุ่มเดียวที่อยู่ในลำดับ Tab (roving tabindex)
+   แล้วเดินระหว่างแท็บด้วยลูกศรซ้าย/ขวา + Home/End */
+
+function initTabs(container, onSelect) {
+  const tabs = container ? [...container.querySelectorAll("button[data-tab]")] : [];
+  if (!tabs.length) return { select() {} };
+  const panels = [...document.querySelectorAll("[data-panel]")];
+
+  tabs.forEach((tab) => {
+    const name = tab.dataset.tab;
+    tab.setAttribute("role", "tab");
+    tab.type = "button";
+    if (!tab.id) tab.id = `tabbtn-${name}`;
+    const panel = panels.find((p) => p.dataset.panel === name);
+    if (panel) {
+      if (!panel.id) panel.id = `tabpanel-${name}`;
+      tab.setAttribute("aria-controls", panel.id);
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", tab.id);
+    }
+  });
+
+  function paint(name) {
+    tabs.forEach((tab) => {
+      const on = tab.dataset.tab === name;
+      tab.classList.toggle("active", on);
+      tab.setAttribute("aria-selected", String(on));
+      tab.tabIndex = on ? 0 : -1;
+    });
+    panels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== name));
+  }
+
+  // moveFocus = true เมื่อผู้ใช้เดินด้วยลูกศร (โฟกัสต้องตามไปที่แท็บที่เลือก)
+  function select(name, moveFocus) {
+    const tab = tabs.find((t) => t.dataset.tab === name);
+    if (!tab || tab.classList.contains("hidden")) return;
+    paint(name);
+    if (moveFocus) tab.focus();
+    if (onSelect) onSelect(name);
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => select(tab.dataset.tab));
+    tab.addEventListener("keydown", (e) => {
+      const open = tabs.filter((t) => !t.classList.contains("hidden"));
+      const i = open.indexOf(tab);
+      let next = null;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") next = open[(i + 1) % open.length];
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = open[(i - 1 + open.length) % open.length];
+      else if (e.key === "Home") next = open[0];
+      else if (e.key === "End") next = open[open.length - 1];
+      if (!next) return;
+      e.preventDefault();
+      select(next.dataset.tab, true);
+    });
+  });
+
+  const current = tabs.find((t) => t.classList.contains("active")) || tabs[0];
+  paint(current.dataset.tab);
+  return { select };
+}
+
+/* ---------- กลุ่ม chip / swatch ที่เป็น role="radio" ----------
+   radiogroup ตามมาตรฐานต้องมีสมาชิกเดียวที่อยู่ในลำดับ Tab แล้วเดินด้วยลูกศร
+   (Enter/Space ใช้ได้เองเพราะทุกตัวเป็น <button>) */
+
+function bindRadioGroup(zone) {
+  if (!zone) return;
+  const all = () => [...zone.querySelectorAll('[role="radio"]')];
+  const usable = () => all().filter((el) => !el.disabled);
+
+  // ตั้ง roving tabindex ใหม่ทุกครั้งที่กลุ่มถูก render ใหม่
+  function syncTabindex() {
+    const list = usable();
+    if (!list.length) return;
+    const on = list.find((el) => el.getAttribute("aria-checked") === "true") || list[0];
+    all().forEach((el) => (el.tabIndex = el === on ? 0 : -1));
+  }
+  syncTabindex();
+
+  if (zone.dataset.radioBound) return;   // ผูก listener ครั้งเดียวต่อ zone (innerHTML เปลี่ยนไม่ลบ dataset)
+  zone.dataset.radioBound = "1";
+
+  zone.addEventListener("keydown", (e) => {
+    const cur = e.target.closest && e.target.closest('[role="radio"]');
+    if (!cur) return;
+    const list = usable();
+    const i = list.indexOf(cur);
+    if (i < 0) return;
+    let next = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") next = list[(i + 1) % list.length];
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = list[(i - 1 + list.length) % list.length];
+    else if (e.key === "Home") next = list[0];
+    else if (e.key === "End") next = list[list.length - 1];
+    if (!next) return;
+    e.preventDefault();
+    const at = all().indexOf(next);
+    next.click();                        // radio เลือกทันทีที่เลื่อนถึง
+    // บางกลุ่ม (ชิปรุ่นรถ/สี/งวด) render ใหม่ทั้งก้อน — หยิบตัวที่ตำแหน่งเดิมมาโฟกัสต่อ
+    const fresh = all();
+    (fresh[at] || next).focus();
+  });
+
+  zone.addEventListener("click", syncTabindex);
+}
+
+/* ---------- ฟอร์ม: ผูกข้อความ error เข้ากับช่องกรอก ----------
+   ไม่ใช้สีเพียงอย่างเดียว (CSS เติมไอคอน + คำว่า "ผิดพลาด" ให้)
+   และผูกด้วย aria-describedby + aria-invalid เพื่อให้โปรแกรมอ่านหน้าจออ่านเหตุผลได้ */
+
+let _errSeq = 0;
+
+function setFieldInvalid(inputId, invalid) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const field = input.closest(".field");
+  if (field) field.classList.toggle("invalid", Boolean(invalid));
+  input.setAttribute("aria-invalid", invalid ? "true" : "false");
+
+  const err = field && field.querySelector(".error");
+  if (!err) return;
+  if (!err.id) err.id = `err-${inputId || ++_errSeq}`;
+  const described = (input.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+  const rest = described.filter((id) => id !== err.id);
+  // ใส่ id ของข้อความ error ต่อท้ายเฉพาะตอนที่ผิดจริง (ไม่งั้นจะอ่านข้อความที่ซ่อนอยู่)
+  input.setAttribute("aria-describedby", invalid ? [...rest, err.id].join(" ") : rest.join(" "));
+  if (!invalid && !rest.length) input.removeAttribute("aria-describedby");
 }
 
 /* ---------- บังคับให้ล็อกอินก่อนเข้าหน้าที่ต้องใช้สิทธิ์ ---------- */
@@ -299,7 +440,7 @@ function renderFooter() {
          <span>ข้อมูลรถ ราคา และการชำระเงินทั้งหมดเป็นการจำลอง</span>
        </div>
      </footer>
-     <div class="toast-zone" id="toast-zone" aria-live="polite"></div>`
+     <div class="toast-zone" id="toast-zone" role="status" aria-live="polite" aria-atomic="false"></div>`
   );
 }
 
@@ -457,14 +598,14 @@ function esc(value) {
 function stars(avg, count) {
   if (!count) return '<span class="stars muted">ยังไม่มีรีวิว</span>';
   const full = Math.round(avg);
-  return `<span class="stars" aria-label="คะแนน ${avg} จาก 5 (${count} รีวิว)">
+  return `<span class="stars" role="img" aria-label="คะแนน ${avg} จาก 5 (${count} รีวิว)">
     <span class="on">${"★".repeat(full)}</span><span class="off">${"★".repeat(5 - full)}</span>
     <b class="num">${Number(avg).toFixed(1)}</b><small>(${count})</small></span>`;
 }
 
 // ดาวของรีวิวรายการเดียว (ไม่มีตัวเลขเฉลี่ย)
 function ratingStars(rating) {
-  return `<span class="stars" aria-label="${rating} ดาว"><span class="on">${"★".repeat(rating)}</span><span class="off">${"★".repeat(5 - rating)}</span></span>`;
+  return `<span class="stars" role="img" aria-label="ให้คะแนน ${rating} จาก 5 ดาว"><span class="on">${"★".repeat(rating)}</span><span class="off">${"★".repeat(5 - rating)}</span></span>`;
 }
 
 // เติมชื่อ/เบอร์/อีเมลจากบัญชีที่ล็อกอินอยู่ลงฟอร์ม (ไม่ทับค่าที่ผู้ใช้พิมพ์ไว้แล้ว)
@@ -548,7 +689,7 @@ function reviewCardHTML(r, { showCar = true, onDelete = false } = {}) {
         ${ratingStars(r.rating)}
         ${r.verified ? '<span class="badge badge-ok">ผ่านการใช้งานจริง</span>' : ""}
       </div>
-      <h4>${esc(r.title)}</h4>
+      <h3>${esc(r.title)}</h3>
       <p>${esc(r.comment)}</p>
       <p class="by">
         <span>${esc(r.author)}</span>
@@ -572,23 +713,28 @@ function reviewFormHTML(cars, selectedId) {
       <h3 class="mb-2">เขียนรีวิว <span class="badge badge-accent">+200 คะแนน</span></h3>
       ${carField}
       <div class="field">
-        <label id="rv-stars-label">ให้คะแนน</label>
+        <!-- ไม่ใช่ <label> เพราะ label ต้องชี้ไปที่ control เดียว — กลุ่มดาวใช้ aria-labelledby แทน -->
+        <p class="field-label" id="rv-stars-label">ให้คะแนน</p>
         <div class="star-input" id="rv-stars" role="radiogroup" aria-labelledby="rv-stars-label">
           ${[1, 2, 3, 4, 5]
-            .map((n) => `<button type="button" data-n="${n}" role="radio" aria-checked="false" aria-label="${n} ดาว">★</button>`)
+            .map(
+              (n) =>
+                `<button type="button" data-n="${n}" role="radio" aria-checked="false"
+                         tabindex="${n === 1 ? 0 : -1}" aria-label="${n} ดาว">★</button>`
+            )
             .join("")}
         </div>
       </div>
       <div class="field">
         <label for="rv-title">หัวข้อรีวิว</label>
         <input type="text" id="rv-title" maxlength="80" placeholder="เช่น แรงแต่ขับในเมืองได้สบาย">
-        <span class="error">หัวข้ออย่างน้อย 2 ตัวอักษร</span>
+        <span class="error" id="err-rv-title">หัวข้ออย่างน้อย 2 ตัวอักษร</span>
       </div>
       <div class="field">
         <label for="rv-comment">รายละเอียด</label>
         <textarea id="rv-comment" maxlength="1000"
           placeholder="เล่าประสบการณ์ทดลองขับหรือการใช้งานจริง ช่วยให้คนที่กำลังตัดสินใจ"></textarea>
-        <span class="error">รายละเอียดอย่างน้อย 10 ตัวอักษร</span>
+        <span class="error" id="err-rv-comment">รายละเอียดอย่างน้อย 10 ตัวอักษร</span>
       </div>
       <button class="btn btn-primary btn-block" id="rv-submit" type="submit">ส่งรีวิว</button>
     </form>`;
@@ -597,21 +743,42 @@ function reviewFormHTML(cars, selectedId) {
 function bindReviewForm(onDone) {
   let rating = 0;
   const starZone = document.getElementById("rv-stars");
-  const buttons = starZone.querySelectorAll("button");
+  const buttons = [...starZone.querySelectorAll("button")];
+  // radiogroup: มีดาวเดียวที่อยู่ในลำดับ Tab — ถ้ายังไม่เลือกให้เป็นดาวแรก
   const paint = () =>
     buttons.forEach((b) => {
       const n = Number(b.dataset.n);
       b.classList.toggle("on", n <= rating);
       b.setAttribute("aria-checked", String(n === rating));
+      b.tabIndex = n === (rating || 1) ? 0 : -1;
     });
-  buttons.forEach((b) => b.addEventListener("click", () => { rating = Number(b.dataset.n); paint(); }));
+  const pick = (n, moveFocus) => {
+    rating = n;
+    paint();
+    if (moveFocus) buttons[n - 1].focus();
+  };
+  buttons.forEach((b) =>
+    b.addEventListener("click", () => pick(Number(b.dataset.n)))
+  );
+  // ลูกศรซ้าย/ขวาเลื่อนคะแนน, Home/End ไปต่ำสุด/สูงสุด (Enter/Space ใช้ได้เองเพราะเป็น <button>)
+  starZone.addEventListener("keydown", (e) => {
+    const cur = rating || 1;
+    let next = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") next = Math.min(5, cur + 1);
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = Math.max(1, cur - 1);
+    else if (e.key === "Home") next = 1;
+    else if (e.key === "End") next = 5;
+    if (!next) return;
+    e.preventDefault();
+    pick(next, true);
+  });
 
   document.getElementById("rv-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = document.getElementById("rv-title").value.trim();
     const comment = document.getElementById("rv-comment").value.trim();
-    document.getElementById("rv-title").closest(".field").classList.toggle("invalid", title.length < 2);
-    document.getElementById("rv-comment").closest(".field").classList.toggle("invalid", comment.length < 10);
+    setFieldInvalid("rv-title", title.length < 2);
+    setFieldInvalid("rv-comment", comment.length < 10);
     if (!rating) return toast("กรุณาให้คะแนนดาวก่อนส่งรีวิว", "error");
     if (title.length < 2 || comment.length < 10) return;
 

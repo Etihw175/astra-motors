@@ -19,21 +19,14 @@ let serviceTime = null;
 
 /* ---------- แท็บ (จำแท็บไว้ใน URL #service / #reviews ให้ลิงก์จากแจ้งเตือนตรงแท็บ) ---------- */
 
-function openTab(name) {
-  document.querySelectorAll(".tabs button").forEach((b) => {
-    const on = b.dataset.tab === name;
-    b.classList.toggle("active", on);
-    b.setAttribute("aria-selected", String(on));
-  });
-  document.querySelectorAll("[data-panel]").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== name));
-}
+// initTabs (ui.js) ดูแล aria-selected / aria-controls / roving tabindex / ลูกศรซ้าย-ขวาให้
+const TABS = initTabs(document.querySelector(".tabs"), (name) => {
+  history.replaceState(null, "", `#${name}`);
+});
 
-document.querySelectorAll(".tabs button").forEach((b) =>
-  b.addEventListener("click", () => {
-    history.replaceState(null, "", `#${b.dataset.tab}`);
-    openTab(b.dataset.tab);
-  })
-);
+function openTab(name) {
+  TABS.select(name);
+}
 
 /* ---------- คะแนนสะสม ---------- */
 
@@ -74,6 +67,7 @@ async function renderLoyalty() {
       <div class="list-row reward-row">
         <div class="main"><b>${esc(r.name)}</b><span class="num">${r.points.toLocaleString("th-TH")} คะแนน</span></div>
         <button class="btn ${r.affordable ? "btn-primary" : "btn-ghost"}" data-reward="${r.id}" type="button"
+          aria-label="${r.affordable ? "แลก" : "คะแนนไม่พอสำหรับ"} ${esc(r.name)}"
           ${r.affordable ? "" : "disabled"}>${r.affordable ? "แลก" : "คะแนนไม่พอ"}</button>
       </div>`
     )
@@ -120,15 +114,20 @@ async function loadServiceSlots() {
     zone.innerHTML = data.slots
       .map(
         (s) => `<button type="button" class="chip" data-time="${s.time}" ${s.available ? "" : "disabled"}
-          aria-label="${s.time} ${s.available ? `ว่าง ${s.remaining} ช่อง` : "เต็ม"}">${s.time}</button>`
+          role="radio" aria-checked="false"
+          aria-label="${s.time} น. ${s.available ? `ว่าง ${s.remaining} ช่อง` : "เต็ม"}">${s.time}</button>`
       )
       .join("");
     zone.querySelectorAll(".chip:not(:disabled)").forEach((chip) =>
       chip.addEventListener("click", () => {
         serviceTime = chip.dataset.time;
-        zone.querySelectorAll(".chip").forEach((c) => c.classList.toggle("selected", c === chip));
+        zone.querySelectorAll(".chip").forEach((c) => {
+          c.classList.toggle("selected", c === chip);
+          c.setAttribute("aria-checked", String(c === chip));
+        });
       })
     );
+    bindRadioGroup(zone);
   } catch (err) {
     zone.innerHTML = `<p class="muted small">${esc(err.message)}</p>`;
   }
@@ -185,7 +184,7 @@ async function submitService(e) {
   const mileageInput = document.getElementById("sv-mileage");
   const mileage = Number(mileageInput.value);
   const badMileage = mileageInput.value === "" || mileage < 0;
-  mileageInput.closest(".field").classList.toggle("invalid", badMileage);
+  setFieldInvalid("sv-mileage", badMileage);
   if (!document.getElementById("sv-date").value) return toast("กรุณาเลือกวันที่", "error");
   if (!serviceTime) return toast("กรุณาเลือกช่วงเวลา", "error");
   if (badMileage) return;

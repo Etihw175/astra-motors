@@ -7,19 +7,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Journey 1/7 — เปรียบเทียบรุ่นรถ</p>
-        <h2>เทียบสเปคเคียงข้างกัน สูงสุด 3 รุ่น</h2>
+        <h1>เทียบสเปคเคียงข้างกัน สูงสุด 3 รุ่น</h1>
         <p>ตัวเลขที่<span style="color:var(--accent-strong)">เน้นสีทองแดง</span>คือค่าที่ดีที่สุดในแถวนั้น — เลือกรุ่นจากช่องด้านบนของแต่ละคอลัมน์ได้เลย</p>
       </div>
 
-      <div class="table-wrap">
-        <table id="compare-table" aria-label="ตารางเปรียบเทียบรุ่นรถ">
+      <div class="table-wrap" tabindex="0" role="group" aria-label="ตารางเปรียบเทียบรุ่นรถ (เลื่อนแนวนอนได้)">
+        <table id="compare-table">
+          <caption class="sr-only">ตารางเปรียบเทียบสเปครุ่นรถ — เลือกรุ่นได้จากช่องด้านบนของแต่ละคอลัมน์</caption>
           <thead><tr id="head-row"></tr></thead>
           <tbody id="body-rows"></tbody>
         </table>
@@ -27,9 +28,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/compare.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/compare.js?v=13"></script>
 </body>
 </html>

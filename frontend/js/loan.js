@@ -42,7 +42,7 @@ async function loadReservation() {
   if (!code) return;
   try {
     reservation = await API.reservation(code);
-    document.getElementById("ln-code").closest(".field").classList.remove("invalid");
+    setInvalid("ln-code", false);
     summaryZone.innerHTML =
       `ใบจอง: <strong>${reservation.car.name}</strong> สี${reservation.color.name} · ` +
       `ราคารวม <span class="num">${baht(reservation.total_price)}</span> · ` +
@@ -55,13 +55,12 @@ async function loadReservation() {
     renderPreview();
   } catch (err) {
     summaryZone.textContent = "";
-    document.getElementById("ln-code").closest(".field").classList.add("invalid");
+    setInvalid("ln-code", true);
   }
 }
 
-function setInvalid(id, invalid) {
-  document.getElementById(id).closest(".field").classList.toggle("invalid", invalid);
-}
+// setFieldInvalid (ui.js) ผูก aria-invalid + aria-describedby ให้ด้วย ไม่ให้เหลือแค่สีแดง
+const setInvalid = setFieldInvalid;
 
 async function submit(e) {
   e.preventDefault();

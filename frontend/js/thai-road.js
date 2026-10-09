@@ -33,6 +33,7 @@ function renderCarChips() {
       run();
     });
   });
+  bindRadioGroup(document.getElementById("sim-cars"));
 }
 
 // รุ่นที่ไม่มีระบบยกหน้ารถต้องกดไม่ได้ ไม่ใช่กดแล้วเงียบ
@@ -131,11 +132,13 @@ function scenarioCard(s) {
 function rankingTable(ranking, activeId) {
   return `
     <div class="card">
-      <h3>เทียบทุกรุ่นภายใต้เงื่อนไขเดียวกัน</h3>
-      <div class="table-wrap mt-2">
+      <h2>เทียบทุกรุ่นภายใต้เงื่อนไขเดียวกัน</h2>
+      <div class="table-wrap mt-2" tabindex="0" role="group" aria-label="ตารางเทียบทุกรุ่น (เลื่อนแนวนอนได้)">
         <table class="user-table">
+          <caption class="sr-only">คะแนนของทุกรุ่นภายใต้สภาพถนนและรูปแบบการใช้รถเดียวกัน</caption>
           <thead>
-            <tr><th>อันดับ</th><th>รุ่น</th><th>คะแนนรวม</th><th>ระยะใต้ท้องที่ใช้จริง</th><th>อัตราสิ้นเปลืองเฉลี่ย</th></tr>
+            <tr><th scope="col">อันดับ</th><th scope="col">รุ่น</th><th scope="col">คะแนนรวม</th>
+              <th scope="col">ระยะใต้ท้องที่ใช้จริง</th><th scope="col">อัตราสิ้นเปลืองเฉลี่ย</th></tr>
           </thead>
           <tbody>
             ${ranking

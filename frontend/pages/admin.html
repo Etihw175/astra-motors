@@ -7,20 +7,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container" style="max-width:1180px">
       <div class="section-head">
         <p class="eyebrow">สำหรับพนักงาน — ไม่ใช่ส่วนของลูกค้า</p>
-        <h2>หลังบ้านโชว์รูม</h2>
+        <h1>หลังบ้านโชว์รูม</h1>
         <p>ดูงานค้างของวัน ค้นหานัดหมายของลูกค้า และปิดงานหน้าเคาน์เตอร์ได้จากหน้าเดียว</p>
       </div>
 
       <!-- ลูกค้าทั่วไปเห็นเฉพาะการ์ดนี้ และหน้านี้จะไม่ยิง API ของหลังบ้านเลย -->
       <div class="card hidden" id="ad-denied">
-        <h3>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</h3>
+        <h2>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</h2>
         <p class="muted mt-1">หากคุณเป็นลูกค้า ข้อมูลการจองทั้งหมดของคุณอยู่ที่หน้า “การจองของฉัน”</p>
         <p class="mt-2"><a href="/pages/status.html">กลับไปหน้าการจองของฉัน</a></p>
       </div>
@@ -40,6 +40,7 @@
 
         <!-- ===== นัดทดลองขับ ===== -->
         <section data-panel="testdrives" role="tabpanel">
+          <h2 class="sr-only">นัดทดลองขับ</h2>
           <div class="card">
             <div class="filter-bar">
               <div class="field">
@@ -72,26 +73,29 @@
           </div>
 
           <div class="card">
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="group" aria-label="ตารางนัดทดลองขับ (เลื่อนแนวนอนได้)">
               <table class="user-table">
+                <caption class="sr-only">รายการนัดทดลองขับตามตัวกรองที่เลือก</caption>
                 <thead>
                   <tr>
-                    <th>รหัสจอง</th><th>วัน/เวลา</th><th>ลูกค้า</th>
-                    <th>รุ่นรถ</th><th>สาขา</th><th>สถานะ</th><th></th>
+                    <th scope="col">รหัสจอง</th><th scope="col">วัน/เวลา</th><th scope="col">ลูกค้า</th>
+                    <th scope="col">รุ่นรถ</th><th scope="col">สาขา</th><th scope="col">สถานะ</th>
+                    <th scope="col"><span class="sr-only">การจัดการ</span></th>
                   </tr>
                 </thead>
-                <tbody id="td-rows"></tbody>
+                <tbody id="td-rows" aria-live="polite" aria-busy="false"></tbody>
               </table>
             </div>
             <div class="pager">
-              <span class="muted small" id="td-summary"></span>
-              <div class="pages" id="td-pages"></div>
+              <span class="muted small" id="td-summary" aria-live="polite"></span>
+              <nav class="pages" id="td-pages" aria-label="แบ่งหน้า"></nav>
             </div>
           </div>
         </section>
 
         <!-- ===== ใบจอง ===== -->
         <section data-panel="reservations" role="tabpanel" class="hidden">
+          <h2 class="sr-only">ใบจอง</h2>
           <div class="card">
             <div class="filter-bar">
               <div class="field">
@@ -111,26 +115,29 @@
           </div>
 
           <div class="card">
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="group" aria-label="ตารางใบจอง (เลื่อนแนวนอนได้)">
               <table class="user-table">
+                <caption class="sr-only">รายการใบจองรถตามตัวกรองที่เลือก</caption>
                 <thead>
                   <tr>
-                    <th>รหัสใบจอง</th><th>ลูกค้า</th><th>รุ่นรถ</th>
-                    <th>ยอดรวม</th><th>สินเชื่อ</th><th>สถานะ</th><th>วันที่ออกใบจอง</th>
+                    <th scope="col">รหัสใบจอง</th><th scope="col">ลูกค้า</th><th scope="col">รุ่นรถ</th>
+                    <th scope="col">ยอดรวม</th><th scope="col">สินเชื่อ</th><th scope="col">สถานะ</th>
+                    <th scope="col">วันที่ออกใบจอง</th>
                   </tr>
                 </thead>
-                <tbody id="rs-rows"></tbody>
+                <tbody id="rs-rows" aria-live="polite" aria-busy="false"></tbody>
               </table>
             </div>
             <div class="pager">
-              <span class="muted small" id="rs-summary"></span>
-              <div class="pages" id="rs-pages"></div>
+              <span class="muted small" id="rs-summary" aria-live="polite"></span>
+              <nav class="pages" id="rs-pages" aria-label="แบ่งหน้า"></nav>
             </div>
           </div>
         </section>
 
         <!-- ===== สินเชื่อ ===== -->
         <section data-panel="loans" role="tabpanel" class="hidden">
+          <h2 class="sr-only">สินเชื่อ</h2>
           <div class="card">
             <div class="filter-bar">
               <div class="field">
@@ -150,26 +157,29 @@
           </div>
 
           <div class="card">
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="group" aria-label="ตารางคำขอสินเชื่อ (เลื่อนแนวนอนได้)">
               <table class="user-table">
+                <caption class="sr-only">รายการคำขอสินเชื่อตามตัวกรองที่เลือก</caption>
                 <thead>
                   <tr>
-                    <th>รหัสคำขอ</th><th>ใบจอง</th><th>ผู้ยื่น</th>
-                    <th>แผน</th><th>เงินดาวน์</th><th>ค่างวด/เดือน</th><th>สถานะ</th>
+                    <th scope="col">รหัสคำขอ</th><th scope="col">ใบจอง</th><th scope="col">ผู้ยื่น</th>
+                    <th scope="col">แผน</th><th scope="col">เงินดาวน์</th><th scope="col">ค่างวด/เดือน</th>
+                    <th scope="col">สถานะ</th>
                   </tr>
                 </thead>
-                <tbody id="ln-rows"></tbody>
+                <tbody id="ln-rows" aria-live="polite" aria-busy="false"></tbody>
               </table>
             </div>
             <div class="pager">
-              <span class="muted small" id="ln-summary"></span>
-              <div class="pages" id="ln-pages"></div>
+              <span class="muted small" id="ln-summary" aria-live="polite"></span>
+              <nav class="pages" id="ln-pages" aria-label="แบ่งหน้า"></nav>
             </div>
           </div>
         </section>
 
         <!-- ===== นัดเข้าศูนย์บริการ ===== -->
         <section data-panel="services" role="tabpanel" class="hidden">
+          <h2 class="sr-only">นัดเข้าศูนย์บริการ</h2>
           <div class="card">
             <div class="filter-bar">
               <div class="field">
@@ -197,20 +207,22 @@
           </div>
 
           <div class="card">
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="group" aria-label="ตารางนัดเข้าศูนย์บริการ (เลื่อนแนวนอนได้)">
               <table class="user-table">
+                <caption class="sr-only">รายการนัดเข้าศูนย์บริการตามตัวกรองที่เลือก</caption>
                 <thead>
                   <tr>
-                    <th>รหัสนัด</th><th>วัน/เวลา</th><th>รุ่นรถ</th>
-                    <th>ศูนย์บริการ</th><th>ประเภทบริการ</th><th>สถานะ</th><th></th>
+                    <th scope="col">รหัสนัด</th><th scope="col">วัน/เวลา</th><th scope="col">รุ่นรถ</th>
+                    <th scope="col">ศูนย์บริการ</th><th scope="col">ประเภทบริการ</th><th scope="col">สถานะ</th>
+                    <th scope="col"><span class="sr-only">การจัดการ</span></th>
                   </tr>
                 </thead>
-                <tbody id="sv-rows"></tbody>
+                <tbody id="sv-rows" aria-live="polite" aria-busy="false"></tbody>
               </table>
             </div>
             <div class="pager">
-              <span class="muted small" id="sv-summary"></span>
-              <div class="pages" id="sv-pages"></div>
+              <span class="muted small" id="sv-summary" aria-live="polite"></span>
+              <nav class="pages" id="sv-pages" aria-label="แบ่งหน้า"></nav>
             </div>
           </div>
         </section>
@@ -218,9 +230,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/admin.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/admin.js?v=13"></script>
 </body>
 </html>

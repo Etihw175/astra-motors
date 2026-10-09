@@ -7,14 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
-  <main class="section">
+  <main class="section" id="main-content" tabindex="-1">
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Journey 5/7 — จองรถออนไลน์</p>
-        <h2>วางเงินจอง ล็อกราคาและโปรโมชั่นทันที</h2>
+        <h1>วางเงินจอง ล็อกราคาและโปรโมชั่นทันที</h1>
         <p>เงินจอง ฿200,000 — ยกเลิกภายใน 7 วันได้รับคืนเต็มจำนวน ราคาที่จองจะถูกล็อกไว้ 14 วัน</p>
       </div>
 
@@ -29,10 +29,10 @@
         <div>
           <div class="card">
             <div id="car-visual"></div>
-            <h3 id="sum-name" class="mt-1"></h3>
+            <h2 id="sum-name" class="mt-1"></h2>
             <p class="muted" id="sum-color"></p>
             <div id="sum-stock" class="mt-1"></div>
-            <div class="price-lines mt-2" id="sum-lines"></div>
+            <div class="price-lines mt-2" id="sum-lines" aria-live="polite"></div>
             <p class="small mt-2"><a href="#" id="edit-link">แก้ไขสี/ออปชัน</a></p>
           </div>
           <div id="promo-zone"></div>
@@ -41,7 +41,7 @@
         <!-- ฝั่งขวา: ข้อมูลผู้จอง + ชำระเงินจอง -->
         <form id="rs-form" novalidate>
           <div class="card">
-            <h3>ข้อมูลผู้จอง</h3>
+            <h2>ข้อมูลผู้จอง</h2>
             <div class="field mt-2">
               <label for="rs-name">ชื่อ-นามสกุล</label>
               <input type="text" id="rs-name" required autocomplete="name">
@@ -66,7 +66,7 @@
           </div>
 
           <div class="card">
-            <h3>ชำระเงินจอง <span class="num" style="color:var(--accent-strong)">฿200,000</span></h3>
+            <h2>ชำระเงินจอง <span class="num" style="color:var(--accent-strong)">฿200,000</span></h2>
             <p class="muted small">การชำระเงินในโปรเจกต์นี้เป็นการจำลอง ไม่มีการตัดเงินจริง</p>
             <div class="chip-row mt-2" id="pay-chips" role="radiogroup" aria-label="เลือกช่องทางชำระเงิน">
               <button type="button" class="chip selected" data-pay="promptpay" role="radio" aria-checked="true">QR พร้อมเพย์</button>
@@ -88,9 +88,9 @@
   </main>
 
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-  <script src="/js/api.js?v=12"></script>
-  <script src="/js/ui.js?v=12"></script>
-  <script src="/js/fx.js?v=12"></script>
-  <script src="/js/reserve.js?v=12"></script>
+  <script src="/js/api.js?v=13"></script>
+  <script src="/js/ui.js?v=13"></script>
+  <script src="/js/fx.js?v=13"></script>
+  <script src="/js/reserve.js?v=13"></script>
 </body>
 </html>

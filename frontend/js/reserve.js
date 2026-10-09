@@ -61,9 +61,8 @@ function renderSummary() {
   }
 }
 
-function setInvalid(id, invalid) {
-  document.getElementById(id).closest(".field").classList.toggle("invalid", invalid);
-}
+// setFieldInvalid (ui.js) ผูก aria-invalid + aria-describedby ให้ด้วย ไม่ให้เหลือแค่สีแดง
+const setInvalid = setFieldInvalid;
 
 async function submit(e) {
   e.preventDefault();
@@ -143,6 +142,7 @@ async function initReserve() {
   document.getElementById("reserve-layout").classList.remove("hidden");
   renderSummary();
 
+  bindRadioGroup(document.getElementById("pay-chips"));
   document.querySelectorAll("#pay-chips .chip").forEach((chip) => {
     chip.addEventListener("click", () => {
       payMethod = chip.dataset.pay;
