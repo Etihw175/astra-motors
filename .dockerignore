@@ -1,0 +1,32 @@
+# ตัดไฟล์ที่ image ไม่ต้องใช้ออกจาก build context — build เร็วขึ้นและ image เล็กลง
+# (Render ส่ง context ทั้งหมดขึ้น build server ไฟล์ยิ่งเยอะยิ่งช้า)
+
+# Git / CI
+.git
+.gitignore
+.github
+
+# เอกสาร ไม่เกี่ยวกับการรันแอป
+docs
+document
+*.md
+*.pdf
+
+# Python cache และ virtualenv ของเครื่องเรา (ใช้ของในเครื่องไม่ได้ เพราะ image เป็น linux)
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.venv
+venv
+
+# เทสต์ไม่ต้องอยู่ใน image production (รันด้วย pytest ในเครื่อง/CI)
+backend/tests
+
+# ไฟล์ลับและฐานข้อมูล SQLite ของเครื่องเรา
+.env
+*.db
+
+# โมเดล 3D สำรองที่ยังไม่ได้ใช้ (รวมกันหลายร้อย MB)
+# เก็บเฉพาะ frontend/assets/models/*.glb 4 ไฟล์ที่หน้า model.html เรียกใช้จริง
+frontend/assets/models/*/

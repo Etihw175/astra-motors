@@ -1,0 +1,29 @@
+# Render Blueprint — deploy ทั้งระบบ (web + PostgreSQL) จากไฟล์นี้ไฟล์เดียว
+# วิธีใช้: Render Dashboard → New → Blueprint → เลือก repo นี้ → Apply
+#   Render จะอ่านไฟล์นี้เอง ไม่ต้องกรอก build/start command ด้วยมือ
+# ขั้นตอนละเอียด + เช็กลิสต์หลัง deploy อยู่ใน docs/DEPLOY.md
+services:
+  - type: web
+    name: astra-motors
+    env: docker                       # ใช้ Dockerfile เดิม ไม่ต้องให้ Render เดา build command
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .                  # ต้องเป็น root ของ repo เพราะ image COPY ทั้ง backend/ และ frontend/
+    plan: free
+    region: singapore                 # ใกล้ไทยที่สุดใน free tier
+    branch: main
+    autoDeploy: true                  # push ขึ้น main แล้ว deploy ใหม่อัตโนมัติ
+    healthCheckPath: /api/health       # Render ถือว่า deploy สำเร็จเมื่อ endpoint นี้ตอบ 200
+    envVars:
+      # ดึง connection string ของฐานข้อมูลด้านล่างมาใส่ให้อัตโนมัติ — ไม่มีรหัสผ่านอยู่ใน repo
+      - key: DATABASE_URL
+        fromDatabase:
+          name: astra-db
+          property: connectionString
+
+databases:
+  # Managed PostgreSQL ของ Render — ข้อมูลอยู่นอกคอนเทนเนอร์ จึงไม่หายเวลา deploy ใหม่หรือ service sleep
+  - name: astra-db
+    databaseName: astra
+    user: astra
+    plan: free
+    region: singapore
