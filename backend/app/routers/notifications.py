@@ -73,6 +73,15 @@ def _on_reservation_created(db, record, **_):
            f"{STATUS_PAGE}?code={record.code}")
 
 
+@subscribe("payment.paid")
+def _on_payment_paid(db, payment, reservation, **_):
+    # แยกจาก reservation.created เพราะเป็นข้อมูลคนละเรื่อง: อันนี้คือ "ใบเสร็จเงินจอง"
+    notify(db, payment.user_id, "payment.paid", "ได้รับเงินจองแล้ว",
+           f"ชำระเงินจอง {payment.amount:,} บาท สำเร็จ (รายการ {payment.id}) "
+           f"ออกใบจอง {reservation.code} เรียบร้อย",
+           f"{STATUS_PAGE}?code={reservation.code}")
+
+
 @subscribe("reservation.cancelled")
 def _on_reservation_cancelled(db, record, **_):
     refund = record.refund or {}

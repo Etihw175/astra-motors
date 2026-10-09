@@ -15,10 +15,10 @@
 |---|---|---|
 | Clients | เว็บเบราว์เซอร์ของลูกค้า/ผู้ดูแลระบบ และ Swagger UI สำหรับนักพัฒนา | `frontend/` |
 | API Gateway / Edge | จุดเข้าเดียวของทุก request: serve ไฟล์หน้าเว็บ, route `/api/*`, ตรวจ Bearer token, validate ข้อมูลด้วย Pydantic, สร้างเอกสาร OpenAPI | `backend/app/main.py`, `security.py` |
-| Domain Services | 9 service แยกตามโดเมนธุรกิจ — แต่ละตัวเป็นเจ้าของ router และตารางของตัวเอง | `backend/app/routers/*.py` |
+| Domain Services | 10 service แยกตามโดเมนธุรกิจ — แต่ละตัวเป็นเจ้าของ router และตารางของตัวเอง | `backend/app/routers/*.py` |
 | Event Bus | service ต้นทางประกาศ event (เช่น `reservation.created`) ส่วน service ปลายทางสมัครรับเอง ไม่ต้องเรียกกันตรง ๆ | `backend/app/events.py` |
 | Data | PostgreSQL 16 ผ่าน SQLModel (ORM) — SQLite ใช้ตอนรันในเครื่องและรันเทสต์ | `models.py`, `database.py`, `seed.py` |
-| External (จำลอง) | Payment gateway, สถาบันการเงิน, Email/SMS | ตรรกะจำลองใน `bookings.py`, `loans.py` |
+| External (จำลอง) | Payment gateway, สถาบันการเงิน, Email/SMS | ตรรกะจำลองใน `payments.py` (QR พร้อมเพย์ตามสเปก EMVCo จริง แต่บัญชีร้านเป็นบัญชีสมมติ), `loans.py` |
 
 ### รายการ service
 
@@ -29,6 +29,7 @@
 | Simulation | 3 | `POST /api/simulation` `/api/simulation/conditions` | — (stateless) | — |
 | Booking | 4 | `/api/showrooms/{id}/slots` `/api/testdrives` `/api/testdrives/{code}/cancel` | `test_drives` | publish `testdrive.booked`, `testdrive.cancelled` |
 | Order | 5–6 | `/api/reservations` `/{code}/cancel` `/{code}/delivery` `/api/me/bookings` | `reservations` | publish `reservation.created`, `reservation.cancelled`, `delivery.scheduled` |
+| Payment | 5 | `POST /api/payments` `/{id}` `/{id}/confirm` `/{id}/cancel` | `payments` | publish `payment.paid` (ออกใบจองตอนยืนยัน จึง publish `reservation.created` ต่อด้วย) |
 | Finance | 5–6 | `/api/loans` `/api/loans/{id}` `/api/documents` | `loans`, `documents` | publish `loan.submitted`, `loan.decided` |
 | After-sales | 7 | `/api/service/types` `/api/service/slots` `/api/service/appointments` `/api/reviews` | `service_appointments`, `reviews` | publish `service.booked`, `service.cancelled`, `review.posted`, `review.deleted` |
 | Notification | 6 | `/api/notifications` `/unread-count` `/read-all` `/stream-ticket` `/stream` (SSE push) | `notifications` | subscribe ทุก event ที่ลูกค้าควรรู้ — ส่งถึงเบราว์เซอร์แบบ push (SSE) และมี poll เป็น fallback |
@@ -82,7 +83,7 @@ sequenceDiagram
 |---|---|---|
 | Presentation | HTML5, CSS3, JavaScript (ES2020, ไม่มี framework/build step), `<model-viewer>` 3.5, Google Fonts | 13 หน้าตาม journey, โมเดล 3D หมุน 360°, เรียก API ด้วย `fetch()` |
 | API / Application | FastAPI 0.115, Uvicorn 0.32, Pydantic v2, OpenAPI/Swagger UI, python-multipart | REST API + serve หน้าเว็บ, validate ข้อมูล, เอกสาร API ที่ `/docs`, อัปโหลดไฟล์ |
-| Business logic | 9 service routers, Event bus, PBKDF2-SHA256 + Bearer token + RBAC | กติกาทางธุรกิจ, สิทธิ์การเข้าถึง, แจ้งเตือน/คะแนนแบบ event-driven |
+| Business logic | 10 service routers, Event bus, PBKDF2-SHA256 + Bearer token + RBAC | กติกาทางธุรกิจ, สิทธิ์การเข้าถึง, แจ้งเตือน/คะแนนแบบ event-driven |
 | Data | SQLModel 0.0.22, SQLAlchemy 2.0, psycopg 3, PostgreSQL 16, SQLite | ORM + ฐานข้อมูลหลัก (Docker) + ฐานข้อมูลตอนพัฒนา/เทสต์ |
 | DevOps | Docker, Docker Compose, Git/GitHub, pytest + httpx, Render/Railway | รันทั้งระบบด้วยคำสั่งเดียว, เทสต์อัตโนมัติ 41 เคส, deploy ด้วย Dockerfile เดิม |
 

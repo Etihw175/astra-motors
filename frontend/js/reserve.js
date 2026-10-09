@@ -1,5 +1,9 @@
 // จองรถออนไลน์ (journey ขั้นตอน 5): สรุปสเปค → ชำระเงินจอง (จำลอง) → ใบจองอิเล็กทรอนิกส์
 // ต้องล็อกอินก่อน — ใบจองผูกกับบัญชี ดู/ยกเลิกได้เฉพาะเจ้าของ และได้คะแนนสะสม 2,000 คะแนน
+//
+// ลำดับที่หน้านี้เดิน (ตรงกับของจริง): POST /api/payments สร้างรายการรอจ่าย → แสดง QR/แผงบัตร
+// → เงินเข้า → ใบจองออก ใบจองจึงไม่เกิดถ้าลูกค้าไม่จ่าย (เส้นทาง POST /api/reservations เดิม
+// ที่ออกใบจองทันทีถูกเก็บไว้เป็น legacy สำหรับเทสต์/เดโมเร็วเท่านั้น)
 "use strict";
 
 requireLogin("/pages/reserve.html");
@@ -9,6 +13,11 @@ renderFooter();
 let car = null;
 let config = null;
 let payMethod = "promptpay";
+let payment = null;        // รายการชำระเงินที่กำลังรออยู่
+let pollTimer = null;      // รอบถามสถานะจากเซิร์ฟเวอร์
+let tickTimer = null;      // นาฬิกานับถอยหลังบนหน้าจอ
+
+const POLL_MS = 3000;      // ถามสถานะทุก 3 วินาที
 
 function selectedColor() {
   return car.colors.find((c) => c.id === config.color_id) || car.colors[0];
@@ -64,39 +73,150 @@ function renderSummary() {
 // setFieldInvalid (ui.js) ผูก aria-invalid + aria-describedby ให้ด้วย ไม่ให้เหลือแค่สีแดง
 const setInvalid = setFieldInvalid;
 
-async function submit(e) {
-  e.preventDefault();
-  const name = document.getElementById("rs-name").value.trim();
-  const phone = document.getElementById("rs-phone").value.trim();
-  const email = document.getElementById("rs-email").value.trim();
+/* ---------- แผงชำระเงินจอง ---------- */
 
-  setInvalid("rs-name", name.length < 2);
-  setInvalid("rs-phone", phone.replace(/\D/g, "").length < 9);
-  setInvalid("rs-email", !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
-  if (document.querySelector(".field.invalid")) return;
-  if (!document.getElementById("rs-agree").checked)
-    return toast("กรุณายอมรับเงื่อนไขการจองก่อนชำระเงิน", "error");
+function stopTimers() {
+  clearInterval(pollTimer);
+  clearInterval(tickTimer);
+  pollTimer = null;
+  tickTimer = null;
+}
 
-  const btn = document.getElementById("rs-submit");
-  btn.disabled = true;
-  btn.textContent = "กำลังออกใบจอง…";
+function setPayStatus(text, type = "muted") {
+  const el = document.getElementById("pay-status");
+  el.className = type === "bad" ? "mt-2 badge badge-bad" : type === "ok" ? "mt-2 badge badge-ok" : "mt-2 muted";
+  el.textContent = text;   // textContent = escape ให้เองอยู่แล้ว
+}
+
+function paintCountdown(seconds) {
+  const left = Math.max(0, seconds);
+  const mm = String(Math.floor(left / 60)).padStart(2, "0");
+  document.getElementById("pay-countdown").textContent = `${mm}:${String(left % 60).padStart(2, "0")}`;
+}
+
+// หมดเวลา/ยกเลิก → ซ่อนปุ่มจ่าย เหลือแต่ปุ่มเริ่มใหม่ (กดด้วยคีย์บอร์ดได้ เพราะเป็น <button> จริง)
+function showRestart(message) {
+  stopTimers();
+  setPayStatus(message, "bad");
+  document.getElementById("pay-simulate").classList.add("hidden");
+  document.getElementById("pay-cancel").classList.add("hidden");
+  const restart = document.getElementById("pay-restart");
+  restart.classList.remove("hidden");
+  restart.focus();
+}
+
+function renderPayPanel() {
+  const panel = document.getElementById("pay-panel");
+  document.getElementById("reserve-layout").classList.add("hidden");
+  panel.classList.remove("hidden");
+
+  document.getElementById("pay-head").innerHTML =
+    `ชำระเงินจอง <span class="num" style="color:var(--accent-strong)">${baht(payment.amount)}</span>`;
+  document.getElementById("pay-note").textContent = payment.simulation_note || "";
+
+  if (payment.method === "promptpay") {
+    document.getElementById("pay-qr-zone").classList.remove("hidden");
+    // qr_svg มาจากเซิร์ฟเวอร์ (สร้างจาก payload ที่ระบบเองคำนวณ) ไม่ใช่ข้อความที่ผู้ใช้พิมพ์
+    // จึงฝังเป็น HTML ได้ ส่วนค่าที่ผู้ใช้/ข้อมูลร้านส่งมาด้านล่างยัง esc() ตามปกติ
+    document.getElementById("pay-qr").innerHTML = payment.qr_svg || "";
+    const pp = payment.promptpay || {};
+    document.getElementById("pay-payee").textContent =
+      `ผู้รับเงิน (สมมติ): ${pp.name || "-"} · ${pp.phone || "-"}`;
+  } else {
+    document.getElementById("pay-card-zone").classList.remove("hidden");
+    document.getElementById("pay-card-mask").textContent =
+      payment.card_last4 ? `•••• •••• •••• ${payment.card_last4}` : "•••• •••• •••• ••••";
+  }
+
+  setPayStatus("รอรับเงิน — ระบบจะตรวจสอบสถานะให้อัตโนมัติ");
+  paintCountdown(payment.expires_in);
+  panel.scrollIntoView({ behavior: "smooth" });
+
+  tickTimer = setInterval(() => {
+    payment.expires_in -= 1;
+    paintCountdown(payment.expires_in);
+    if (payment.expires_in <= 0) refreshPayment();   // ให้เซิร์ฟเวอร์เป็นคนชี้ขาดว่าหมดอายุจริง
+  }, 1000);
+  // ในระบบจริงเซิร์ฟเวอร์รู้ผลจาก webhook ของ payment gateway แล้ว push มาให้
+  // เดโมนี้ยังไม่มี gateway จริง จึงให้เบราว์เซอร์ถามสถานะเป็นรอบ ๆ แทน
+  pollTimer = setInterval(refreshPayment, POLL_MS);
+}
+
+async function refreshPayment() {
+  if (!payment) return;
+  let fresh;
   try {
-    const record = await API.createReservation({
-      car_id: config.car_id,
-      color_id: config.color_id,
-      option_ids: config.option_ids,
-      name,
-      phone,
-      email,
-      payment_method: payMethod,
-      contact_message_only: document.getElementById("rs-msg-only").checked,
-    });
-    Store.save("reservation_code", record.code);
+    fresh = await API.payment(payment.id);
+  } catch {
+    return;   // เน็ตสะดุดรอบเดียวไม่ต้องตกใจ รอบถัดไปถามใหม่
+  }
+  payment = { ...payment, ...fresh };
+  paintCountdown(payment.expires_in);
 
-    document.getElementById("reserve-layout").classList.add("hidden");
-    const panel = document.getElementById("rs-confirm");
-    panel.classList.remove("hidden");
-    panel.innerHTML = `
+  if (payment.status === "paid") return finishPayment();
+  if (payment.status === "expired")
+    return showRestart("หมดเวลาชำระเงินแล้ว รายการนี้ถูกยกเลิกอัตโนมัติ กรุณาเริ่มรายการใหม่");
+  if (payment.status === "failed")
+    return showRestart("รายการชำระเงินถูกยกเลิก กรุณาเริ่มรายการใหม่");
+}
+
+async function finishPayment() {
+  stopTimers();
+  setPayStatus("ได้รับเงินจองแล้ว กำลังออกใบจอง…", "ok");
+  try {
+    const record = await API.reservation(payment.reservation_code);
+    document.getElementById("pay-panel").classList.add("hidden");
+    renderConfirm(record);
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function simulatePaid() {
+  const btn = document.getElementById("pay-simulate");
+  btn.disabled = true;
+  setPayStatus("กำลังยืนยันกับธนาคาร (จำลอง)…");
+  try {
+    payment = { ...payment, ...(await API.confirmPayment(payment.id)) };
+    await finishPayment();
+  } catch (err) {
+    btn.disabled = false;
+    toast(err.message, "error");
+    refreshPayment();   // 400 เพราะหมดอายุ -> ให้แผงเปลี่ยนเป็นปุ่มเริ่มใหม่
+  }
+}
+
+async function cancelPayment() {
+  try {
+    await API.cancelPayment(payment.id);
+  } catch (err) {
+    toast(err.message, "error");
+  }
+  showRestart("ยกเลิกการชำระเงินแล้ว ยังไม่มีการออกใบจอง");
+}
+
+function restart() {
+  stopTimers();
+  payment = null;
+  document.getElementById("pay-panel").classList.add("hidden");
+  document.getElementById("pay-qr-zone").classList.add("hidden");
+  document.getElementById("pay-card-zone").classList.add("hidden");
+  document.getElementById("pay-simulate").classList.remove("hidden");
+  document.getElementById("pay-simulate").disabled = false;
+  document.getElementById("pay-cancel").classList.remove("hidden");
+  document.getElementById("pay-restart").classList.add("hidden");
+  document.getElementById("reserve-layout").classList.remove("hidden");
+  document.getElementById("rs-submit").focus();
+}
+
+/* ---------- ใบจองอิเล็กทรอนิกส์ (ใช้ร่วมกันทุกเส้นทางที่ออกใบจองสำเร็จ) ---------- */
+
+function renderConfirm(record) {
+  Store.save("reservation_code", record.code);
+  document.getElementById("reserve-layout").classList.add("hidden");
+  const panel = document.getElementById("rs-confirm");
+  panel.classList.remove("hidden");
+  panel.innerHTML = `
       <div class="icon-big">${ICONS.check}</div>
       <h2>ออกใบจองอิเล็กทรอนิกส์แล้ว</h2>
       <p class="code">${record.code}</p>
@@ -115,12 +235,48 @@ async function submit(e) {
         <a class="btn btn-primary" href="/pages/loan.html">ยื่นขอสินเชื่อต่อเลย</a>
         <a class="btn btn-ghost" href="/pages/status.html?code=${record.code}">ดูสถานะการจอง</a>
       </div>`;
-    panel.scrollIntoView({ behavior: "smooth" });
+  panel.scrollIntoView({ behavior: "smooth" });
+}
+
+/* ---------- เริ่มรายการชำระเงิน (กดจากฟอร์ม) ---------- */
+
+async function submit(e) {
+  e.preventDefault();
+  const name = document.getElementById("rs-name").value.trim();
+  const phone = document.getElementById("rs-phone").value.trim();
+  const email = document.getElementById("rs-email").value.trim();
+  const last4 = document.getElementById("rs-last4").value.trim();
+
+  setInvalid("rs-name", name.length < 2);
+  setInvalid("rs-phone", phone.replace(/\D/g, "").length < 9);
+  setInvalid("rs-email", !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+  setInvalid("rs-last4", payMethod === "card" && last4 !== "" && !/^\d{4}$/.test(last4));
+  if (document.querySelector(".field.invalid")) return;
+  if (!document.getElementById("rs-agree").checked)
+    return toast("กรุณายอมรับเงื่อนไขการจองก่อนชำระเงิน", "error");
+
+  const btn = document.getElementById("rs-submit");
+  btn.disabled = true;
+  btn.textContent = "กำลังสร้างรายการชำระเงิน…";
+  try {
+    payment = await API.createPayment({
+      car_id: config.car_id,
+      color_id: config.color_id,
+      option_ids: config.option_ids,
+      name,
+      phone,
+      email,
+      method: payMethod,
+      contact_message_only: document.getElementById("rs-msg-only").checked,
+      // ส่งแค่ 4 ตัวท้ายเพื่อแสดงผล — ไม่มีช่องกรอกเลขบัตรเต็มในหน้านี้โดยเจตนา
+      card_last4: payMethod === "card" && last4 ? last4 : null,
+    });
+    renderPayPanel();
   } catch (err) {
     toast(err.message, "error");
   } finally {
     btn.disabled = false;
-    btn.textContent = "ชำระเงินจองและออกใบจอง";
+    btn.textContent = "ไปหน้าชำระเงินจอง";
   }
 }
 
@@ -150,9 +306,15 @@ async function initReserve() {
         c.classList.toggle("selected", c === chip);
         c.setAttribute("aria-checked", c === chip ? "true" : "false");
       });
+      // ช่อง 4 ตัวท้ายมีความหมายเฉพาะช่องทางบัตร
+      document.getElementById("rs-card-field").classList.toggle("hidden", payMethod !== "card");
+      setInvalid("rs-last4", false);
     });
   });
   document.getElementById("rs-form").addEventListener("submit", submit);
+  document.getElementById("pay-simulate").addEventListener("click", simulatePaid);
+  document.getElementById("pay-cancel").addEventListener("click", cancelPayment);
+  document.getElementById("pay-restart").addEventListener("click", restart);
 }
 
 initReserve();

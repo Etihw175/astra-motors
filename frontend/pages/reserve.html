@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=13">
+  <link rel="stylesheet" href="/css/style.css?v=14">
 </head>
 <body>
   <main class="section" id="main-content" tabindex="-1">
@@ -72,14 +72,49 @@
               <button type="button" class="chip selected" data-pay="promptpay" role="radio" aria-checked="true">QR พร้อมเพย์</button>
               <button type="button" class="chip" data-pay="card" role="radio" aria-checked="false">บัตรเครดิต/เดบิต</button>
             </div>
+            <!-- บัตร: รับแค่ 4 ตัวท้ายเพื่อแสดงผล — ระบบจริงต้องให้ payment gateway เก็บเลขบัตรแล้วส่ง token มา -->
+            <div class="field mt-2 hidden" id="rs-card-field">
+              <label for="rs-last4">4 ตัวท้ายของบัตร (ไม่บังคับ)</label>
+              <input type="text" id="rs-last4" inputmode="numeric" maxlength="4" autocomplete="off">
+              <p class="hint">ใช้แสดงบนใบเสร็จจำลองเท่านั้น ระบบนี้ไม่รับและไม่เก็บเลขบัตรเต็ม</p>
+              <p class="error">กรอกเป็นตัวเลข 4 หลัก หรือเว้นว่างไว้</p>
+            </div>
             <label class="check mt-2">
               <input type="checkbox" id="rs-agree">
               <span>ยอมรับเงื่อนไขการจองและนโยบายคืนเงิน: ยกเลิกภายใน 7 วันคืนเต็มจำนวน หลังจากนั้นคืน 50%</span>
             </label>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-block" id="rs-submit">ชำระเงินจองและออกใบจอง</button>
+          <button type="submit" class="btn btn-primary btn-block" id="rs-submit">ไปหน้าชำระเงินจอง</button>
         </form>
+      </div>
+
+      <!-- แผงชำระเงินจอง (จำลอง) — โผล่หลังสร้างรายการชำระเงินแล้ว ยังไม่มีใบจองในขั้นนี้ -->
+      <div class="card hidden" id="pay-panel">
+        <p class="badge badge-warn">จำลอง — ห้ามสแกนจ่ายเงินจริง</p>
+        <h2 class="mt-1" id="pay-head">ชำระเงินจอง</h2>
+        <p class="muted small" id="pay-note"></p>
+
+        <div class="pay-qr mt-2 hidden" id="pay-qr-zone">
+          <div class="pay-qr-box" id="pay-qr" role="img"
+               aria-label="QR พร้อมเพย์สำหรับชำระเงินจอง (จำลอง ห้ามสแกนจ่ายจริง)"></div>
+          <p class="small muted mt-1" id="pay-payee"></p>
+        </div>
+
+        <div class="pay-card mt-2 hidden" id="pay-card-zone">
+          <p>บัตรเครดิต/เดบิต <span class="num" id="pay-card-mask"></span></p>
+          <p class="small muted">รอการยืนยันจากผู้ออกบัตร (จำลอง) — ระบบนี้ไม่ส่งข้อมูลบัตรไปที่ใด</p>
+        </div>
+
+        <!-- สถานะเปลี่ยนเองจากการ poll จึงต้องเป็น aria-live ให้โปรแกรมอ่านหน้าจอรู้ด้วย -->
+        <p class="mt-2" id="pay-status" role="status" aria-live="polite"></p>
+        <p class="small muted">เวลาที่เหลือ <span class="num" id="pay-countdown">--:--</span></p>
+
+        <div class="mt-3" style="display:flex;gap:12px;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary" id="pay-simulate">จำลองว่าชำระเงินแล้ว (ปุ่มเดโม)</button>
+          <button type="button" class="btn btn-ghost" id="pay-cancel">ยกเลิกการชำระเงิน</button>
+          <button type="button" class="btn btn-primary hidden" id="pay-restart">เริ่มรายการใหม่</button>
+        </div>
       </div>
 
       <!-- ใบจองอิเล็กทรอนิกส์ (หลังจองสำเร็จ) -->
@@ -88,9 +123,9 @@
   </main>
 
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-  <script src="/js/api.js?v=13"></script>
-  <script src="/js/ui.js?v=13"></script>
-  <script src="/js/fx.js?v=13"></script>
-  <script src="/js/reserve.js?v=13"></script>
+  <script src="/js/api.js?v=14"></script>
+  <script src="/js/ui.js?v=14"></script>
+  <script src="/js/fx.js?v=14"></script>
+  <script src="/js/reserve.js?v=14"></script>
 </body>
 </html>

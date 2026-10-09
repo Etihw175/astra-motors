@@ -104,6 +104,64 @@ def cancel_testdrive(
 
 
 # ---------- จองรถออนไลน์ (ขั้นตอน 5) ----------
+# ตรรกะ "คิดราคา" และ "ออกใบจอง" ถูกแยกเป็นฟังก์ชันด้านล่าง เพราะมี 2 เส้นทางที่ใช้ร่วมกัน:
+#   1) POST /api/reservations (legacy) — ออกใบจองทันที สมมติว่าจ่ายเงินจองแล้ว
+#   2) Payment service (routers/payments.py) — เส้นทางที่หน้าเว็บใช้จริง: จ่ายก่อน แล้วค่อยออกใบจอง
+# ห้าม copy-paste ตรรกะนี้ไปที่อื่น ไม่งั้นราคา/การล็อกโปรฯ ของสองเส้นทางจะเพี้ยนไม่ตรงกัน
+
+
+def quote_reservation(db: Session, car_id: str, color_id: str, option_ids: list[str]) -> dict:
+    """คิดราคาสเปคที่เลือก + สถานะโปรโมชั่น ณ วันนี้ (ไม่เขียนฐานข้อมูล)"""
+    car = get_car_or_404(db, car_id)
+    color = next((c for c in car.colors if c["id"] == color_id), None)
+    if not color:
+        raise HTTPException(status_code=404, detail="ไม่พบสีที่เลือก")
+
+    options = [o for o in car.options if o["id"] in option_ids]
+    total = car.price + color["extra"] + sum(o["price"] for o in options)
+
+    # ล็อกราคา/โปรโมชั่น ณ วันที่ออกใบจอง (edge case: ราคา/โปรฯ เปลี่ยนภายหลังไม่กระทบใบจองนี้)
+    promo = car.promotion
+    promo_active = bool(promo) and date_cls.fromisoformat(promo["expires"]) >= date_cls.today()
+    return {
+        "car": car,
+        "color": color,
+        "options": options,
+        "total_price": total,
+        "booking_fee": BOOKING_FEE,
+        "promotion": promo if promo_active else None,
+        "promotion_expired": bool(promo) and not promo_active,
+    }
+
+
+def issue_reservation(db: Session, user: User, quote: dict, *, payment_method: str,
+                      name: str, phone: str, email: str,
+                      contact_message_only: bool = False) -> Reservation:
+    """ออกใบจองอิเล็กทรอนิกส์ + ประกาศ event (ผู้เรียกเป็นคน commit เหมือน publish ตัวอื่น)"""
+    car = quote["car"]
+    record = Reservation(
+        code=new_code("ADR"),
+        user_id=user.id,
+        car_id=car.id,
+        car_name=car.name,
+        base_price=car.price,
+        color=quote["color"],
+        options=quote["options"],
+        total_price=quote["total_price"],
+        booking_fee=quote["booking_fee"],
+        payment_method=payment_method,
+        promotion=quote["promotion"],
+        promotion_expired=quote["promotion_expired"],
+        price_locked_until=date_cls.today() + timedelta(days=PRICE_LOCK_DAYS),
+        customer_name=name.strip(),
+        customer_phone=phone.strip(),
+        customer_email=email.strip(),
+        contact_message_only=contact_message_only,
+    )
+    db.add(record)
+    publish(db, "reservation.created", record=record)
+    return record
+
 
 @router.post("/reservations", status_code=201)
 def create_reservation(
@@ -111,42 +169,21 @@ def create_reservation(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_session),
 ):
-    car = get_car_or_404(db, body.car_id)
-    color = next((c for c in car.colors if c["id"] == body.color_id), None)
-    if not color:
-        raise HTTPException(status_code=404, detail="ไม่พบสีที่เลือก")
+    """เส้นทาง legacy: ออกใบจองทันทีโดยสมมติว่าเงินจองเข้าแล้ว
+
+    คงไว้เพื่อเทสต์/เดโมที่ต้องการใบจองในคำขอเดียว ส่วนหน้าเว็บใช้ Payment service
+    (POST /api/payments → /confirm) ซึ่งเดินตามขั้นตอนจริงคือจ่ายเงินให้สำเร็จก่อนจึงออกใบจอง
+    """
     if body.payment_method not in ("promptpay", "card"):
         raise HTTPException(status_code=400, detail="ช่องทางชำระเงินไม่ถูกต้อง")
 
-    options = [o for o in car.options if o["id"] in body.option_ids]
-    total = car.price + color["extra"] + sum(o["price"] for o in options)
-
-    # ล็อกราคา/โปรโมชั่น ณ วันที่ออกใบจอง (edge case: ราคา/โปรฯ เปลี่ยนภายหลังไม่กระทบใบจองนี้)
-    today = date_cls.today()
-    promo = car.promotion
-    promo_active = bool(promo) and date_cls.fromisoformat(promo["expires"]) >= today
-
-    record = Reservation(
-        code=new_code("ADR"),
-        user_id=user.id,
-        car_id=car.id,
-        car_name=car.name,
-        base_price=car.price,
-        color=color,
-        options=options,
-        total_price=total,
-        booking_fee=BOOKING_FEE,
+    quote = quote_reservation(db, body.car_id, body.color_id, body.option_ids)
+    record = issue_reservation(
+        db, user, quote,
         payment_method=body.payment_method,
-        promotion=promo if promo_active else None,
-        promotion_expired=bool(promo) and not promo_active,
-        price_locked_until=today + timedelta(days=PRICE_LOCK_DAYS),
-        customer_name=body.name.strip(),
-        customer_phone=body.phone.strip(),
-        customer_email=body.email.strip(),
+        name=body.name, phone=body.phone, email=body.email,
         contact_message_only=body.contact_message_only,
     )
-    db.add(record)
-    publish(db, "reservation.created", record=record)
     db.commit()
     db.refresh(record)
     return reservation_dict(record)

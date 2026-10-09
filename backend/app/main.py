@@ -17,6 +17,7 @@ from .routers import (
     finance,
     loans,
     notifications,
+    payments,
     reviews,
     showrooms,
     simulation,
@@ -39,6 +40,7 @@ for module in (
     auth, users,                    # Identity service
     cars, showrooms, finance,       # Catalog service
     bookings,                       # Booking + Order service
+    payments,                       # Payment service (จ่ายเงินจองก่อนออกใบจอง)
     loans, documents,               # Finance service
     notifications,                  # Notification service
     reviews, after_sales,           # After-sales + Loyalty service

@@ -518,6 +518,16 @@ input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); cu
 }
 .confirm-panel .icon-big { margin: 0 auto var(--space-2); width: 64px; height: 64px; border-radius: 50%; background: rgba(88, 185, 139, 0.14); display: flex; align-items: center; justify-content: center; }
 
+/* ---------- แผงชำระเงินจอง (QR พร้อมเพย์จำลอง) ---------- */
+/* กล่อง QR ต้องมีพื้นหลังขาวจริงเสมอ ไม่ไล่ตามธีม ไม่งั้นโมดูลสีดำกลืนพื้นหลังจนสแกนไม่ติด */
+.pay-qr-box {
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1);
+  width: min(260px, 100%);
+}
+.pay-qr-box svg { display: block; width: 100%; height: auto; }
+
 /* ---------- Detail layout (หน้ารายละเอียดรุ่น) ---------- */
 .detail-layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: var(--space-4); align-items: start; }
 .detail-visual { position: sticky; top: 84px; }

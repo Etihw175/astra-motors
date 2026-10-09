@@ -80,6 +80,7 @@ const API = {
   cancelTestdrive: (code) =>
     _api(`/api/testdrives/${encodeURIComponent(code)}/cancel`, { method: "POST" }),
   myBookings: () => _api("/api/me/bookings"),
+  // เส้นทาง legacy ที่ออกใบจองทันที — หน้าเว็บใช้ชุด payment* ด้านล่างแทน (จ่ายก่อนจึงออกใบจอง)
   createReservation: (body) =>
     _api("/api/reservations", { method: "POST", body: JSON.stringify(body) }),
   reservation: (code) => _api(`/api/reservations/${encodeURIComponent(code)}`),
@@ -90,6 +91,13 @@ const API = {
       method: "POST",
       body: JSON.stringify({ date }),
     }),
+  /* ---------- ชำระเงินจอง (จำลอง): payment intent → QR/บัตร → ยืนยัน → ออกใบจอง ---------- */
+  createPayment: (body) => _api("/api/payments", { method: "POST", body: JSON.stringify(body) }),
+  payment: (id) => _api(`/api/payments/${encodeURIComponent(id)}`),
+  // ของจริงเป็น webhook จาก payment gateway — ที่นี่เปิดให้กดจำลองเพื่อเดโมให้ครบวงจร
+  confirmPayment: (id) => _api(`/api/payments/${encodeURIComponent(id)}/confirm`, { method: "POST" }),
+  cancelPayment: (id) => _api(`/api/payments/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
+
   createLoan: (body) => _api("/api/loans", { method: "POST", body: JSON.stringify(body) }),
   loan: (id) => _api(`/api/loans/${encodeURIComponent(id)}`),
   uploadDocument: (file, kind) => {

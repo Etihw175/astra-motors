@@ -7,3 +7,6 @@ python-multipart==0.0.20
 # alembic อยู่ในชุด runtime (ไม่ใช่ dev) เพราะตอน deploy แอปเรียก `alembic upgrade head`
 # จาก init_db() ใน app/database.py ทันทีที่สตาร์ต — ถ้าไม่มีแพ็กเกจนี้ในอิมเมจ โครงตารางจะไม่อัปเดต
 alembic==1.14.0
+# segno สร้าง QR พร้อมเพย์เป็น SVG — pure python ไม่ต้องมี Pillow/zbar/ไลบรารีระบบ
+# จึงติดตั้งในอิมเมจ slim ได้เลย (ตัว payload EMVCo เขียนเองใน app/promptpay.py)
+segno==1.6.1

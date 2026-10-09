@@ -25,6 +25,23 @@ class ReservationCreate(BaseModel):
     contact_message_only: bool = False
 
 
+class PaymentCreate(BaseModel):
+    """เริ่มรายการชำระเงินจอง (payment intent) — ใบจองจะออกหลังยืนยันการชำระเงินแล้วเท่านั้น"""
+    car_id: str
+    color_id: str
+    option_ids: list[str] = []
+    name: str = Field(..., min_length=2, max_length=100)
+    phone: str = Field(..., min_length=9, max_length=15)
+    email: str = Field(..., min_length=5, max_length=100)
+    method: str = Field(..., description="promptpay หรือ card (จำลองทั้งคู่)")
+    contact_message_only: bool = False
+    # รับได้แค่ 4 ตัวท้ายเพื่อแสดงผล "•••• 4242" เท่านั้น — ห้ามรับเลขบัตรเต็มเด็ดขาด
+    # ระบบจริงต้องให้ payment gateway (Omise/2C2P/Stripe) เก็บเลขบัตรแล้วส่ง token กลับมา
+    # ร้านค้าเก็บแต่ token เพื่อไม่ต้องเข้าขอบเขต PCI-DSS เอง
+    card_last4: Optional[str] = Field(None, min_length=4, max_length=4,
+                                      description="4 ตัวท้ายบัตร (ไม่บังคับ ใช้แสดงผลเท่านั้น)")
+
+
 class DeliveryCreate(BaseModel):
     date: str = Field(..., description="วันนัดรับรถ รูปแบบ YYYY-MM-DD")
 

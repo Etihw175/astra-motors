@@ -137,6 +137,30 @@ class Reservation(SQLModel, table=True):
     created_at: dt.datetime = Field(default_factory=now)
 
 
+class Payment(SQLModel, table=True):
+    """รายการชำระเงินจอง (จำลอง) — เกิดก่อนใบจอง ไม่ใช่หลังใบจอง
+
+    ทำไมต้องมีตารางนี้แยกจาก reservations: ในระบบจริงการจ่ายเงินมีสถานะของตัวเอง
+    (รอจ่าย / หมดอายุ / จ่ายแล้ว / ล้มเหลว) และใบจองต้องออก "หลัง" ยืนยันเงินเข้าเท่านั้น
+    ถ้าผูกไว้ในใบจองเดียวกันจะมีใบจองค้างที่ยังไม่จ่ายปนอยู่ในระบบ
+    """
+    __tablename__ = "payments"
+
+    id: str = Field(primary_key=True, max_length=24)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    purpose: str = Field(default="booking_fee", max_length=20)   # ตอนนี้มีแค่เงินจอง
+    amount: int
+    method: str = Field(max_length=20)                           # promptpay | card (จำลองทั้งคู่)
+    status: str = Field(default="pending", index=True, max_length=20)  # pending | paid | expired | failed
+    # สเปครถ + ข้อมูลผู้จอง ณ ตอนกดจ่าย — เก็บไว้เพื่อออกใบจองตอนยืนยัน (ราคาจึงไม่เปลี่ยนกลางทาง)
+    reference: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    qr_payload: Optional[str] = None                             # EMVCo string (ไม่เก็บรูป สร้าง SVG ใหม่ได้)
+    expires_at: dt.datetime
+    paid_at: Optional[dt.datetime] = None
+    reservation_code: Optional[str] = Field(default=None, foreign_key="reservations.code")
+    created_at: dt.datetime = Field(default_factory=now)
+
+
 class Document(SQLModel, table=True):
     """ไฟล์เอกสารประกอบสินเชื่อที่ผู้ใช้อัปโหลด (บัตรประชาชน/สลิปเงินเดือน) เก็บเป็น binary"""
     __tablename__ = "documents"
