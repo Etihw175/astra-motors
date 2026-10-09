@@ -127,9 +127,9 @@ async function loadUsers() {
           (u) => `
         <tr>
           <td class="num">#${u.id}</td>
-          <td>${u.username}</td>
-          <td>${u.full_name}</td>
-          <td class="muted">${u.email}</td>
+          <td>${esc(u.username)}</td>
+          <td>${esc(u.full_name)}</td>
+          <td class="muted">${esc(u.email)}</td>
           <td>${u.role === "admin" ? '<span class="badge badge-accent">admin</span>' : "customer"}</td>
           <td>${badgeFor(u)}</td>
           <td>
