@@ -145,4 +145,17 @@ const API = {
     _api(`/api/users/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteUser: (id) => _api(`/api/users/${encodeURIComponent(id)}`, { method: "DELETE" }),
   checkUsername: (name) => _api(`/api/check-username/${encodeURIComponent(name)}`),
+
+  /* ---------- หลังบ้านพนักงานโชว์รูม (เฉพาะ admin — เรียกจาก /pages/admin.html) ---------- */
+  adminOverview: () => _api("/api/admin/overview"),
+  adminTestdrives: (filters) => _api(`/api/admin/testdrives${_query(filters)}`),
+  adminReservations: (filters) => _api(`/api/admin/reservations${_query(filters)}`),
+  adminLoans: (filters) => _api(`/api/admin/loans${_query(filters)}`),
+  adminServices: (filters) => _api(`/api/admin/service-appointments${_query(filters)}`),
+  adminCompleteTestdrive: (code, outcome = "completed") =>
+    _api(`/api/admin/testdrives/${encodeURIComponent(code)}/complete${_query({ outcome })}`, {
+      method: "POST",
+    }),
+  adminCompleteService: (code) =>
+    _api(`/api/admin/service-appointments/${encodeURIComponent(code)}/complete`, { method: "POST" }),
 };

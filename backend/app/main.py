@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from .database import IS_SQLITE, engine, init_db
 from .routers import (
+    admin,
     after_sales,
     auth,
     bookings,
@@ -42,6 +43,7 @@ for module in (
     notifications,                  # Notification service
     reviews, after_sales,           # After-sales + Loyalty service
     simulation,                     # Simulation service
+    admin,                          # หลังบ้านพนักงานโชว์รูม (มุมมองข้ามทุก service)
 ):
     app.include_router(module.router)
 

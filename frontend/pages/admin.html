@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>หลังบ้านโชว์รูม — ASTRA Motors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=11">
+</head>
+<body>
+  <main class="section">
+    <div class="container" style="max-width:1180px">
+      <div class="section-head">
+        <p class="eyebrow">สำหรับพนักงาน — ไม่ใช่ส่วนของลูกค้า</p>
+        <h2>หลังบ้านโชว์รูม</h2>
+        <p>ดูงานค้างของวัน ค้นหานัดหมายของลูกค้า และปิดงานหน้าเคาน์เตอร์ได้จากหน้าเดียว</p>
+      </div>
+
+      <!-- ลูกค้าทั่วไปเห็นเฉพาะการ์ดนี้ และหน้านี้จะไม่ยิง API ของหลังบ้านเลย -->
+      <div class="card hidden" id="ad-denied">
+        <h3>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</h3>
+        <p class="muted mt-1">หากคุณเป็นลูกค้า ข้อมูลการจองทั้งหมดของคุณอยู่ที่หน้า “การจองของฉัน”</p>
+        <p class="mt-2"><a href="/pages/status.html">กลับไปหน้าการจองของฉัน</a></p>
+      </div>
+
+      <div id="ad-body" class="hidden">
+        <!-- ===== ตัวเลขสรุป ===== -->
+        <div class="stat-tiles" id="ad-tiles" aria-live="polite">
+          <p class="muted small">กำลังโหลดตัวเลขสรุป…</p>
+        </div>
+
+        <div class="tabs mt-3" role="tablist" aria-label="เมนูหลังบ้าน">
+          <button type="button" class="active" data-tab="testdrives" role="tab" aria-selected="true">นัดทดลองขับ</button>
+          <button type="button" data-tab="reservations" role="tab" aria-selected="false">ใบจอง</button>
+          <button type="button" data-tab="loans" role="tab" aria-selected="false">สินเชื่อ</button>
+          <button type="button" data-tab="services" role="tab" aria-selected="false">นัดเข้าศูนย์</button>
+        </div>
+
+        <!-- ===== นัดทดลองขับ ===== -->
+        <section data-panel="testdrives" role="tabpanel">
+          <div class="card">
+            <div class="filter-bar">
+              <div class="field">
+                <label for="td-q">ค้นหา</label>
+                <input type="search" id="td-q" placeholder="รหัสจอง, ชื่อ หรือเบอร์โทร">
+              </div>
+              <div class="field">
+                <label for="td-status">สถานะ</label>
+                <select id="td-status">
+                  <option value="">ทั้งหมด</option>
+                  <option value="confirmed">ยืนยันแล้ว</option>
+                  <option value="completed">มาแล้ว</option>
+                  <option value="no_show">ไม่มาตามนัด</option>
+                  <option value="cancelled">ยกเลิก</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="td-showroom">สาขา</label>
+                <select id="td-showroom"><option value="">ทุกสาขา</option></select>
+              </div>
+              <div class="field">
+                <label for="td-from">ตั้งแต่วันที่</label>
+                <input type="date" id="td-from">
+              </div>
+              <div class="field">
+                <label for="td-to">ถึงวันที่</label>
+                <input type="date" id="td-to">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-wrap">
+              <table class="user-table">
+                <thead>
+                  <tr>
+                    <th>รหัสจอง</th><th>วัน/เวลา</th><th>ลูกค้า</th>
+                    <th>รุ่นรถ</th><th>สาขา</th><th>สถานะ</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="td-rows"></tbody>
+              </table>
+            </div>
+            <div class="pager">
+              <span class="muted small" id="td-summary"></span>
+              <div class="pages" id="td-pages"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== ใบจอง ===== -->
+        <section data-panel="reservations" role="tabpanel" class="hidden">
+          <div class="card">
+            <div class="filter-bar">
+              <div class="field">
+                <label for="rs-q">ค้นหา</label>
+                <input type="search" id="rs-q" placeholder="รหัสใบจอง, ชื่อ หรือเบอร์โทร">
+              </div>
+              <div class="field">
+                <label for="rs-status">สถานะ</label>
+                <select id="rs-status">
+                  <option value="">ทั้งหมด</option>
+                  <option value="reserved">วางเงินจองแล้ว</option>
+                  <option value="delivery_scheduled">นัดรับรถแล้ว</option>
+                  <option value="cancelled">ยกเลิก</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-wrap">
+              <table class="user-table">
+                <thead>
+                  <tr>
+                    <th>รหัสใบจอง</th><th>ลูกค้า</th><th>รุ่นรถ</th>
+                    <th>ยอดรวม</th><th>สินเชื่อ</th><th>สถานะ</th><th>วันที่ออกใบจอง</th>
+                  </tr>
+                </thead>
+                <tbody id="rs-rows"></tbody>
+              </table>
+            </div>
+            <div class="pager">
+              <span class="muted small" id="rs-summary"></span>
+              <div class="pages" id="rs-pages"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== สินเชื่อ ===== -->
+        <section data-panel="loans" role="tabpanel" class="hidden">
+          <div class="card">
+            <div class="filter-bar">
+              <div class="field">
+                <label for="ln-q">ค้นหา</label>
+                <input type="search" id="ln-q" placeholder="รหัสคำขอ, รหัสใบจอง, ชื่อ หรือเบอร์โทร">
+              </div>
+              <div class="field">
+                <label for="ln-status">สถานะ</label>
+                <select id="ln-status">
+                  <option value="">ทั้งหมด</option>
+                  <option value="reviewing">กำลังพิจารณา</option>
+                  <option value="approved">อนุมัติ</option>
+                  <option value="rejected">ไม่อนุมัติ</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-wrap">
+              <table class="user-table">
+                <thead>
+                  <tr>
+                    <th>รหัสคำขอ</th><th>ใบจอง</th><th>ผู้ยื่น</th>
+                    <th>แผน</th><th>เงินดาวน์</th><th>ค่างวด/เดือน</th><th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody id="ln-rows"></tbody>
+              </table>
+            </div>
+            <div class="pager">
+              <span class="muted small" id="ln-summary"></span>
+              <div class="pages" id="ln-pages"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== นัดเข้าศูนย์บริการ ===== -->
+        <section data-panel="services" role="tabpanel" class="hidden">
+          <div class="card">
+            <div class="filter-bar">
+              <div class="field">
+                <label for="sv-status">สถานะ</label>
+                <select id="sv-status">
+                  <option value="">ทั้งหมด</option>
+                  <option value="booked">รอเข้าศูนย์</option>
+                  <option value="completed">ปิดงานแล้ว</option>
+                  <option value="cancelled">ยกเลิก</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="sv-showroom">ศูนย์บริการ</label>
+                <select id="sv-showroom"><option value="">ทุกศูนย์</option></select>
+              </div>
+              <div class="field">
+                <label for="sv-from">ตั้งแต่วันที่</label>
+                <input type="date" id="sv-from">
+              </div>
+              <div class="field">
+                <label for="sv-to">ถึงวันที่</label>
+                <input type="date" id="sv-to">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-wrap">
+              <table class="user-table">
+                <thead>
+                  <tr>
+                    <th>รหัสนัด</th><th>วัน/เวลา</th><th>รุ่นรถ</th>
+                    <th>ศูนย์บริการ</th><th>ประเภทบริการ</th><th>สถานะ</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="sv-rows"></tbody>
+              </table>
+            </div>
+            <div class="pager">
+              <span class="muted small" id="sv-summary"></span>
+              <div class="pages" id="sv-pages"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js?v=11"></script>
+  <script src="/js/ui.js?v=11"></script>
+  <script src="/js/fx.js?v=11"></script>
+  <script src="/js/admin.js?v=11"></script>
+</body>
+</html>

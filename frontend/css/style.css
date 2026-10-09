@@ -1129,3 +1129,15 @@ textarea:focus { border-color: var(--accent); outline: none; }
   .auth-zone .user-pill { padding-right: 5px; }
   .auth-zone .user-pill .who { display: none; }   /* เหลือแค่วงกลมตัวอักษรแรก ประหยัดที่ให้เมนู */
 }
+
+/* หลังบ้านโชว์รูม: การ์ดตัวเลขสรุป — auto-fit ให้จอแคบไหลเป็นคอลัมน์เดียวเองโดยไม่ต้องมี media query */
+.stat-tiles { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.stat-tiles .stat-tile { margin-top: 0; }
+.stat-tile .label { font-size: 13px; color: var(--text-dim); }
+.stat-tile .value { font-family: var(--font-data); font-size: 26px; font-weight: 600; line-height: 1.2; color: var(--accent-strong); overflow-wrap: anywhere; }
+.stat-tile .hint { font-size: 12px; color: var(--text-dim); min-height: 18px; }
+
+/* ตารางหลังบ้านมีคอลัมน์มาก — บีบตัวอักษรและ padding ลงหน่อย จะได้ไม่ต้องเลื่อนแนวนอนบ่อย */
+#ad-body .user-table { font-size: 13px; }
+#ad-body .user-table th, #ad-body .user-table td { padding: 10px 11px; vertical-align: top; }
+#ad-body .user-table .row-actions { flex-wrap: wrap; }

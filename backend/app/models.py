@@ -104,7 +104,7 @@ class TestDrive(SQLModel, table=True):
     name: str
     phone: str
     contact_message_only: bool = False
-    status: str = "confirmed"                                 # confirmed | cancelled
+    status: str = "confirmed"                                 # confirmed | cancelled | completed | no_show
     created_at: dt.datetime = Field(default_factory=now)
 
 
@@ -205,7 +205,7 @@ class ServiceAppointment(SQLModel, table=True):
     service_type: str
     mileage_km: int
     note: str = ""
-    status: str = "booked"                                    # booked | cancelled
+    status: str = "booked"                                    # booked | cancelled | completed
     created_at: dt.datetime = Field(default_factory=now)
 
 

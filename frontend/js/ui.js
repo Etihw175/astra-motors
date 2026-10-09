@@ -11,10 +11,14 @@ const NAV_ITEMS = [
   { key: "testdrive", label: "จองทดลองขับ", href: "/pages/test-drive.html" },
   { key: "status", label: "การจองของฉัน", href: "/pages/status.html" },
   { key: "after-sales", label: "หลังการขาย", href: "/pages/after-sales.html" },
+  // หลังบ้านเป็นเมนูเดียวที่ขึ้นกับสิทธิ์ — renderHeader คัดออกให้ลูกค้าไม่เห็นลิงก์เลย
+  { key: "admin", label: "หลังบ้าน", href: "/pages/admin.html", adminOnly: true },
 ];
 
 function renderHeader(activeKey) {
-  const nav = NAV_ITEMS.map(
+  // ซ่อนเมนูเฉพาะ admin ตั้งแต่ตอน render (ฝั่ง backend กันซ้ำอีกชั้นด้วย require_admin)
+  const isAdmin = typeof Auth !== "undefined" && Auth.user() && Auth.user().role === "admin";
+  const nav = NAV_ITEMS.filter((i) => !i.adminOnly || isAdmin).map(
     (i) =>
       `<a href="${i.href}" ${i.key === activeKey ? 'class="active" aria-current="page"' : ""}>${i.label}</a>`
   ).join("");

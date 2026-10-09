@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, func, select, update
 
+from ..data import POINTS_EARN
 from ..database import get_session
 from ..events import subscribe
 from ..models import Notification, User
@@ -40,6 +41,16 @@ def _on_testdrive_booked(db, record, car, **_):
 def _on_testdrive_cancelled(db, record, **_):
     notify(db, record.user_id, "testdrive.cancelled", "ยกเลิกนัดทดลองขับแล้ว",
            f"นัดรหัส {record.code} ถูกยกเลิก คิวเวลานี้เปิดให้ลูกค้าท่านอื่นจองต่อได้", STATUS_PAGE)
+
+
+@subscribe("testdrive.completed")
+def _on_testdrive_completed(db, record, **_):
+    # ไม่มาตามนัด (no_show) ก็ใช้ event เดียวกัน แต่ไม่ต้องขอบคุณ/ชวนรีวิว
+    if record.status != "completed":
+        return
+    notify(db, record.user_id, "testdrive.completed", "ขอบคุณที่มาทดลองขับ",
+           f"นัดรหัส {record.code} เสร็จสิ้นแล้ว เขียนรีวิวรับ "
+           f"{POINTS_EARN['review']:,} คะแนน", f"{AFTER_SALES_PAGE}#reviews")
 
 
 @subscribe("reservation.created")
@@ -96,6 +107,13 @@ def _on_service_booked(db, record, **_):
 def _on_service_cancelled(db, record, **_):
     notify(db, record.user_id, "service.cancelled", "ยกเลิกนัดเข้าศูนย์บริการแล้ว",
            f"นัดรหัส {record.code} ถูกยกเลิก", AFTER_SALES_PAGE)
+
+
+@subscribe("service.completed")
+def _on_service_completed(db, record, **_):
+    notify(db, record.user_id, "service.completed", "งานบริการเสร็จแล้ว",
+           f"นัดรหัส {record.code} ปิดงานเรียบร้อย ขอบคุณที่ใช้บริการศูนย์ ASTRA Motors",
+           AFTER_SALES_PAGE)
 
 
 @subscribe("points.redeemed")
