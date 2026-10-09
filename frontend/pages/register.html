@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=17">
+  <link rel="stylesheet" href="/css/style.css?v=19">
 </head>
 <body>
   <main class="section" id="main-content" tabindex="-1">
@@ -23,9 +23,10 @@
           <div class="field">
             <label for="rg-username">Username</label>
             <input type="text" id="rg-username" required autocomplete="username"
-                   placeholder="a-z, 0-9, _ และ . ความยาว 4-20 ตัวอักษร">
+                   placeholder="a-z, A-Z, 0-9, _ และ . ความยาว 4-20 ตัวอักษร">
             <!-- เช็คกับ GET /api/check-username/{name} แบบ real-time ขณะพิมพ์ -->
             <p class="name-state" id="rg-username-state" aria-live="polite"></p>
+            <!-- ข้อความนี้ถูกเขียนทับด้วยสาเหตุจริง (สั้นเกิน / มีช่องว่าง / ถูกใช้แล้ว) ใน register.js -->
             <p class="error">username ต้องยาว 4-20 ตัวอักษร และยังไม่มีคนใช้</p>
           </div>
 
@@ -44,7 +45,7 @@
             <div class="field">
               <label for="rg-phone">เบอร์โทรศัพท์</label>
               <input type="tel" id="rg-phone" required autocomplete="tel" inputmode="tel">
-              <p class="error">กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก</p>
+              <p class="error">รูปแบบเบอร์โทรไม่ถูกต้อง — กรอก 0 ตามด้วยตัวเลข 8-9 หลัก (หรือ +66 ตามด้วยตัวเลข 8-9 หลัก)</p>
             </div>
           </div>
 
@@ -61,10 +62,15 @@
             <p class="error">รหัสผ่านทั้งสองช่องไม่ตรงกัน</p>
           </div>
 
-          <label class="check">
-            <input type="checkbox" id="rg-consent">
-            <span>ยินยอมให้เก็บและใช้ข้อมูลส่วนบุคคลเพื่อการติดต่อและพิจารณาสินเชื่อ ตาม PDPA</span>
-          </label>
+          <!-- ช่องยินยอมอยู่ใน .field เหมือนช่องอื่น เพื่อให้ข้อความผิดขึ้นตรงใต้ช่องนี้
+               และ setFieldInvalid ผูก aria-invalid/aria-describedby ให้เองเหมือนกัน -->
+          <div class="field consent-field">
+            <label class="check" for="rg-consent">
+              <input type="checkbox" id="rg-consent">
+              <span>ยินยอมให้เก็บและใช้ข้อมูลส่วนบุคคลเพื่อการติดต่อและพิจารณาสินเชื่อ ตาม PDPA</span>
+            </label>
+            <p class="error">กรุณาติ๊กยินยอมเงื่อนไขการใช้ข้อมูลส่วนบุคคล (PDPA) ก่อนสมัคร</p>
+          </div>
 
           <button type="submit" class="btn btn-primary btn-block" id="rg-submit">สมัครสมาชิก</button>
         </form>
@@ -74,9 +80,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=17"></script>
-  <script src="/js/ui.js?v=17"></script>
-  <script src="/js/fx.js?v=17"></script>
-  <script src="/js/register.js?v=17"></script>
+  <script src="/js/api.js?v=19"></script>
+  <script src="/js/ui.js?v=19"></script>
+  <script src="/js/fx.js?v=19"></script>
+  <script src="/js/register.js?v=19"></script>
 </body>
 </html>

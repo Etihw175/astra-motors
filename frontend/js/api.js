@@ -48,9 +48,15 @@ async function _api(path, options = {}) {
     // token หมดอายุ/ถูกยกเลิก -> ล้างทิ้งเพื่อให้หน้าเว็บกลับไปสถานะยังไม่ล็อกอิน
     if (res.status === 401) Auth.clear();
     const detail = data && data.detail;
-    throw new Error(
+    const err = new Error(
       typeof detail === "string" ? detail : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
     );
+    err.status = res.status;
+    // 422 ส่ง fields: [{field, label, message}] มาด้วย — หน้าเว็บเอาไปทาสีแดงช่องที่ผิดได้ตรงช่อง
+    if (data && Array.isArray(data.fields)) err.fields = data.fields;
+    // 429 (ยิงถี่เกิน) บอกด้วยว่าให้รออีกกี่วินาที
+    if (res.status === 429) err.retryAfter = Number(res.headers.get("Retry-After")) || null;
+    throw err;
   }
   return data;
 }

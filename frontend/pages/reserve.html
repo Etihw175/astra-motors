@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=17">
+  <link rel="stylesheet" href="/css/style.css?v=19">
 </head>
 <body>
   <main class="section" id="main-content" tabindex="-1">
@@ -33,7 +33,8 @@
             <p class="muted" id="sum-color"></p>
             <div id="sum-stock" class="mt-1"></div>
             <div class="price-lines mt-2" id="sum-lines" aria-live="polite"></div>
-            <p class="small mt-2"><a href="#" id="edit-link">แก้ไขสี/ออปชัน</a></p>
+            <!-- tap-link: เป้าแตะสูง 44px ตาม WCAG 2.5.8 (ของเดิมสูงแค่ 18px) -->
+            <p class="small mt-2"><a class="tap-link" href="#" id="edit-link">แก้ไขสี/ออปชัน</a></p>
           </div>
           <div id="promo-zone"></div>
         </div>
@@ -51,7 +52,7 @@
               <div class="field">
                 <label for="rs-phone">เบอร์โทรศัพท์</label>
                 <input type="tel" id="rs-phone" required autocomplete="tel" inputmode="tel">
-                <p class="error">กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก</p>
+                <p class="error">รูปแบบเบอร์โทรไม่ถูกต้อง — กรอก 0 ตามด้วยตัวเลข 8-9 หลัก (หรือ +66 ตามด้วยตัวเลข 8-9 หลัก)</p>
               </div>
               <div class="field">
                 <label for="rs-email">อีเมล (รับใบจองอิเล็กทรอนิกส์)</label>
@@ -79,10 +80,14 @@
               <p class="hint">ใช้แสดงบนใบเสร็จจำลองเท่านั้น ระบบนี้ไม่รับและไม่เก็บเลขบัตรเต็ม</p>
               <p class="error">กรอกเป็นตัวเลข 4 หลัก หรือเว้นว่างไว้</p>
             </div>
-            <label class="check mt-2">
-              <input type="checkbox" id="rs-agree">
-              <span>ยอมรับเงื่อนไขการจองและนโยบายคืนเงิน: ยกเลิกภายใน 7 วันคืนเต็มจำนวน หลังจากนั้นคืน 50%</span>
-            </label>
+            <!-- ช่องยอมรับเงื่อนไขอยู่ใน .field เพื่อให้ข้อความผิดขึ้นตรงใต้ช่องนี้ ไม่ใช่ใน toast -->
+            <div class="field consent-field mt-2">
+              <label class="check" for="rs-agree">
+                <input type="checkbox" id="rs-agree">
+                <span>ยอมรับเงื่อนไขการจองและนโยบายคืนเงิน: ยกเลิกภายใน 7 วันคืนเต็มจำนวน หลังจากนั้นคืน 50%</span>
+              </label>
+              <p class="error">กรุณาติ๊กยอมรับเงื่อนไขการจองก่อนชำระเงินจอง</p>
+            </div>
           </div>
 
           <button type="submit" class="btn btn-primary btn-block" id="rs-submit">ไปหน้าชำระเงินจอง</button>
@@ -123,9 +128,9 @@
   </main>
 
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-  <script src="/js/api.js?v=17"></script>
-  <script src="/js/ui.js?v=17"></script>
-  <script src="/js/fx.js?v=17"></script>
-  <script src="/js/reserve.js?v=17"></script>
+  <script src="/js/api.js?v=19"></script>
+  <script src="/js/ui.js?v=19"></script>
+  <script src="/js/fx.js?v=19"></script>
+  <script src="/js/reserve.js?v=19"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=17">
+  <link rel="stylesheet" href="/css/style.css?v=19">
 </head>
 <body>
   <main class="section" id="main-content" tabindex="-1">
@@ -22,7 +22,8 @@
       <div class="card hidden" id="ad-denied">
         <h2>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</h2>
         <p class="muted mt-1">หากคุณเป็นลูกค้า ข้อมูลการจองทั้งหมดของคุณอยู่ที่หน้า “การจองของฉัน”</p>
-        <p class="mt-2"><a href="/pages/status.html">กลับไปหน้าการจองของฉัน</a></p>
+        <!-- tap-link: เป้าแตะสูง 44px ตาม WCAG 2.5.8 (ของเดิมสูงแค่ 20px) -->
+        <p class="mt-2"><a class="tap-link" href="/pages/status.html">กลับไปหน้าการจองของฉัน</a></p>
       </div>
 
       <div id="ad-body" class="hidden">
@@ -230,9 +231,9 @@
     </div>
   </main>
 
-  <script src="/js/api.js?v=17"></script>
-  <script src="/js/ui.js?v=17"></script>
-  <script src="/js/fx.js?v=17"></script>
-  <script src="/js/admin.js?v=17"></script>
+  <script src="/js/api.js?v=19"></script>
+  <script src="/js/ui.js?v=19"></script>
+  <script src="/js/fx.js?v=19"></script>
+  <script src="/js/admin.js?v=19"></script>
 </body>
 </html>

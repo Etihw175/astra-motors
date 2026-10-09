@@ -248,12 +248,13 @@ async function submit(e) {
   const last4 = document.getElementById("rs-last4").value.trim();
 
   setInvalid("rs-name", name.length < 2);
-  setInvalid("rs-phone", phone.replace(/\D/g, "").length < 9);
+  setInvalid("rs-phone", !phoneOk(phone));
   setInvalid("rs-email", !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
   setInvalid("rs-last4", payMethod === "card" && last4 !== "" && !/^\d{4}$/.test(last4));
-  if (document.querySelector(".field.invalid")) return;
-  if (!document.getElementById("rs-agree").checked)
-    return toast("กรุณายอมรับเงื่อนไขการจองก่อนชำระเงิน", "error");
+  // ไม่ติ๊กยอมรับเงื่อนไขก็เป็นข้อผิดพลาดของฟอร์มเหมือนช่องอื่น — ขึ้นข้อความตรงใต้ช่องนั้น
+  // แล้ว focusFirstInvalid() พาโฟกัสไปที่ช่องที่ผิดช่องแรก (รวมถึง checkbox นี้)
+  setInvalid("rs-agree", !document.getElementById("rs-agree").checked);
+  if (focusFirstInvalid()) return;
 
   const btn = document.getElementById("rs-submit");
   btn.disabled = true;
@@ -274,6 +275,7 @@ async function submit(e) {
     renderPayPanel();
   } catch (err) {
     toast(err.message, "error");
+    applyServerFieldErrors(err, { name: "rs-name", phone: "rs-phone", email: "rs-email", card_last4: "rs-last4" });
   } finally {
     btn.disabled = false;
     btn.textContent = "ไปหน้าชำระเงินจอง";
@@ -311,6 +313,14 @@ async function initReserve() {
       setInvalid("rs-last4", false);
     });
   });
+  // แก้ให้ถูกแล้วสีแดงหายทันที (ของเดิม validate แค่ตอนกดส่ง)
+  bindLiveClear({
+    "rs-name": (v) => v.trim().length < 2,
+    "rs-phone": (v) => !phoneOk(v),
+    "rs-email": (v) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()),
+    "rs-last4": (v) => payMethod === "card" && v.trim() !== "" && !/^\d{4}$/.test(v.trim()),
+  });
+  bindConsentClear("rs-agree");
   document.getElementById("rs-form").addEventListener("submit", submit);
   document.getElementById("pay-simulate").addEventListener("click", simulatePaid);
   document.getElementById("pay-cancel").addEventListener("click", cancelPayment);

@@ -62,6 +62,16 @@ async function loadReservation() {
 // setFieldInvalid (ui.js) ผูก aria-invalid + aria-describedby ให้ด้วย ไม่ให้เหลือแค่สีแดง
 const setInvalid = setFieldInvalid;
 
+// แก้ให้ถูกแล้วสีแดงหายทันที (ของเดิม validate แค่ตอนกดส่ง)
+bindLiveClear({
+  "ln-name": (v) => v.trim().length < 2,
+  "ln-phone": (v) => !phoneOk(v),
+  "ln-income": (v) => !(Number(v) > 0),
+  "ln-down": (v) => !reservation || !(Number(v) >= 0 && Number(v) < reservation.total_price),
+  "ln-code": (v) => !reservation || !v.trim(),
+});
+bindConsentClear("ln-consent");
+
 async function submit(e) {
   e.preventDefault();
   if (!reservation) {
@@ -74,12 +84,12 @@ async function submit(e) {
   const down = Number(document.getElementById("ln-down").value);
 
   setInvalid("ln-name", name.length < 2);
-  setInvalid("ln-phone", phone.replace(/\D/g, "").length < 9);
+  setInvalid("ln-phone", !phoneOk(phone));
   setInvalid("ln-income", !(income > 0));
   setInvalid("ln-down", !(down >= 0 && down < reservation.total_price));
-  if (document.querySelector(".field.invalid")) return;
-  if (!document.getElementById("ln-consent").checked)
-    return toast("กรุณายินยอมการใช้ข้อมูล (PDPA) ก่อนส่งคำขอ", "error");
+  // ไม่ติ๊กยินยอม PDPA ก็เป็นข้อผิดพลาดของฟอร์มเหมือนช่องอื่น — ขึ้นข้อความตรงใต้ช่องนั้น
+  setInvalid("ln-consent", !document.getElementById("ln-consent").checked);
+  if (focusFirstInvalid()) return;
 
   const files = [
     ["doc-id", "id_card"],

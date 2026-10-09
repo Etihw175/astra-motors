@@ -144,7 +144,7 @@ function render() {
 
   // ----- ผูก event หลัง render -----
   const btnCancel = document.getElementById("btn-cancel");
-  if (btnCancel) btnCancel.addEventListener("click", () => toggleModal(true));
+  if (btnCancel) btnCancel.addEventListener("click", () => toggleModal(true, btnCancel));
 
   const btnDelivery = document.getElementById("btn-delivery");
   if (btnDelivery) {
@@ -353,8 +353,14 @@ async function loadReservation(code) {
 const modal = document.getElementById("cancel-modal");
 let modalOpener = null;   // ปุ่มที่เปิด modal — ปิดแล้วต้องคืนโฟกัสกลับไปที่นี่
 
-function toggleModal(open) {
-  if (open) modalOpener = document.activeElement;
+// opener = ปุ่มที่เปิด modal ส่งมาตรง ๆ ไม่พึ่ง document.activeElement เพียงอย่างเดียว
+// (คลิกด้วยเมาส์/สคริปต์บางกรณี activeElement ยังเป็น <body> ปิดแล้วโฟกัสจึงหลุดไปต้นหน้า
+//  = ไปโผล่ที่ปุ่มกระดิ่ง ไม่กลับมาที่ปุ่ม "ยกเลิกใบจอง" ที่กดเปิด)
+function toggleModal(open, opener) {
+  if (open) {
+    const active = document.activeElement;
+    modalOpener = opener || (active instanceof HTMLElement && active !== document.body ? active : null);
+  }
   // hidden คุมทั้งการแสดงผลและการเข้าถึง: ตอนปิด เนื้อหาใน modal จะไม่อยู่ในลำดับ Tab เลย
   modal.hidden = !open;
   modal.classList.toggle("open", open);

@@ -1315,3 +1315,86 @@ body.modal-open { overflow: hidden; }
 .wl-card h3 { font-size: 19px; margin-top: 8px; }
 .wl-card .price { color: var(--accent-strong); font-size: 20px; font-weight: 600; margin-top: 6px; }
 .wl-card .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--space-2); }
+
+/* =========================================================
+   รอบแก้จากการทดสอบ UI จริง (QA) — เมนูมือถือ / เป้าแตะ / ช่องยินยอม
+   ========================================================= */
+
+/* เดสก์ท็อปไม่ต้องมีปุ่มเมนู — เมนูเป็นแถวแนวนอนเหมือนเดิม */
+.nav-toggle { display: none; }
+
+@media (max-width: 720px) {
+  /* จอแคบ: เมนู 6 รายการยาวเกินจอ ของเดิมต้องเลื่อนแนวนอนโดยไม่มีสัญญาณบอก
+     จึงเปลี่ยนเป็นปุ่ม "เมนู" กดเปิดรายการแนวตั้ง */
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    margin-left: auto;
+    padding: 0 14px;
+    border: 1px solid var(--field-border);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .nav-toggle[aria-expanded="true"] { border-color: var(--accent); color: var(--accent-strong); }
+  .nav-toggle .bars {
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    box-shadow: 0 -5px currentColor, 0 5px currentColor;
+  }
+  .auth-zone { margin-left: 0; }
+  /* ปิดอยู่ = display:none จึงไม่อยู่ในลำดับ Tab เลย
+     เปิดแล้วเป็นรายการแนวตั้งที่อยู่ใน flow ของ header → ดันเนื้อหาลง ไม่ลอยทับ */
+  .site-nav { display: none; overflow-x: visible; }
+  .site-nav.open { display: flex; flex-direction: column; gap: 2px; padding-bottom: 8px; }
+  .site-nav.open a { width: 100%; justify-content: flex-start; border-radius: var(--radius-sm); }
+}
+
+/* ลิงก์ข้อความที่ต้องแตะได้บนมือถือ: เป้าสูงอย่างน้อย 44px ตาม WCAG 2.5.8 */
+.tap-link { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* ช่องยินยอม (checkbox) อยู่ใน .field เหมือนช่องอื่น ข้อความผิดจึงขึ้นตรงใต้ช่องนั้นเลย
+   ไม่ต้องไปอ่านจาก toast ที่หายไปเอง */
+.field.consent-field { gap: 0; }
+.field.consent-field .check { padding-bottom: 6px; }
+
+@media (max-width: 600px) {
+  /* ตารางสเปค 2 คอลัมน์: ถ้าจำนวนช่องเป็นเลขคี่ ให้ช่องสุดท้ายยืดเต็มแถว
+     ไม่เหลือช่องสีเทาว่างเปล่า (สีเทาคือพื้นหลังของ grid ที่โปร่งออกมา) */
+  .spec-grid .cell:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+@media (max-width: 420px) {
+  /* แถบบนสุดเตี้ยลง: ย่อโลโก้ให้โลโก้+ปุ่มเมนูอยู่บรรทัดเดียวกันได้ */
+  .brand { font-size: 18px; letter-spacing: 0.1em; }
+}
+
+/* กล่องรหัสสิทธิ์หลังแลกคะแนน — ต้องอ่านได้จากในหน้า ไม่ใช่มีแต่ในกระดิ่งแจ้งเตือน */
+.voucher-box {
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+.voucher-box .code {
+  font-family: var(--font-data);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent-strong);
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+
+/* ลิงก์ชื่อรุ่นในการ์ดรีวิว (หน้าแรก/หน้ารุ่น) สูงแค่ ~21px — บนจอสัมผัส/จอมือถือ
+   ขยายเป็นเป้าแตะ 44px ตาม WCAG 2.5.8 โดยไม่ขยับเลย์เอาต์ของเดสก์ท็อป */
+@media (pointer: coarse), (max-width: 420px) {
+  .review-card .by a { display: inline-flex; align-items: center; min-height: 44px; }
+}

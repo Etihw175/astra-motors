@@ -32,12 +32,52 @@ function renderHeader(activeKey) {
      <header class="site-header">
        <div class="container bar">
          <a class="brand" href="/">ASTRA<span class="tick">/</span>MOTORS</a>
-         <nav class="site-nav" aria-label="เมนูหลัก">${nav}</nav>
+         <button class="nav-toggle" id="nav-toggle" type="button"
+                 aria-expanded="false" aria-controls="site-nav">
+           <span class="bars" aria-hidden="true"></span>เมนู
+         </button>
+         <nav class="site-nav" id="site-nav" aria-label="เมนูหลัก">${nav}</nav>
          <div class="auth-zone" id="auth-zone"></div>
        </div>
      </header>`
   );
+  initNavToggle();
   renderAuthZone(activeKey);
+}
+
+/* ---------- ปุ่ม "เมนู" สำหรับจอมือถือ ----------
+   จอแคบ (≤720px) เมนู 6 รายการยาวกว่าความกว้างจอ ของเดิมเลื่อนแนวนอนโดยไม่มีสัญญาณบอก
+   จึงมองไม่เห็นเมนูท้าย ๆ เลย — เปลี่ยนเป็นปุ่มกดเปิดรายการแนวตั้งที่ "ดันเนื้อหาลง"
+   (อยู่ใน flow ของ header) ไม่ได้ลอยทับเนื้อหา และปิดด้วย Escape / คลิกนอกเมนู
+   เดสก์ท็อปไม่เปลี่ยน: CSS ซ่อนปุ่มนี้และโชว์เมนูเป็นแถวแนวนอนเหมือนเดิม */
+
+function initNavToggle() {
+  const btn = document.getElementById("nav-toggle");
+  const nav = document.getElementById("site-nav");
+  if (!btn || !nav) return;
+
+  const setOpen = (open, moveFocus) => {
+    nav.classList.toggle("open", open);
+    btn.setAttribute("aria-expanded", String(open));
+    if (!open && moveFocus) btn.focus();   // ปิดแล้วโฟกัสกลับมาที่ปุ่มที่เปิด
+  };
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setOpen(!nav.classList.contains("open"));
+  });
+  // กดลิงก์ในเมนูแล้วต้องปิด (กรณีลิงก์ภายในหน้าเดียวกัน เช่น #promo-section)
+  nav.addEventListener("click", (e) => {
+    if (e.target.closest("a")) setOpen(false);
+  });
+  document.addEventListener("click", (e) => {
+    if (!nav.classList.contains("open")) return;
+    if (!nav.contains(e.target) && e.target !== btn) setOpen(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !nav.classList.contains("open")) return;
+    setOpen(false, true);
+  });
 }
 
 /* ---------- แถบสมาชิกมุมขวาบน (ขึ้นกับสถานะล็อกอิน) ---------- */
@@ -422,6 +462,76 @@ function setFieldInvalid(inputId, invalid) {
   if (!invalid && !rest.length) input.removeAttribute("aria-describedby");
 }
 
+// เปลี่ยนข้อความใน .error ของช่องนั้น — ใช้ตอนที่สาเหตุของความผิดต่างกันไปในแต่ละกรณี
+// (เช่น username ผิดเพราะสั้น / มีช่องว่าง / ถูกใช้แล้ว) ไม่ใช่ข้อความรวม ๆ อันเดียว
+function setFieldError(inputId, message) {
+  const input = document.getElementById(inputId);
+  const field = input && input.closest(".field");
+  const err = field && field.querySelector(".error");
+  if (err) err.textContent = message;
+}
+
+/* ---------- ล้างกรอบแดงทันทีที่ผู้ใช้แก้ให้ถูก ----------
+   ของเดิม validate ตอน submit เท่านั้น กรอกแก้ให้ถูกแล้วสีแดงยังค้างอยู่จนกดส่งอีกครั้ง
+   ที่นี่จึง "ล้าง" ให้เท่านั้น ไม่ขึ้นแดงใหม่ระหว่างพิมพ์ (ขึ้นแดงกลางคำกวนผู้ใช้)
+   rules = { inputId: (value, input) => true ถ้าค่านั้น "ยังผิดอยู่" } */
+
+function bindLiveClear(rules) {
+  Object.entries(rules).forEach(([id, isInvalid]) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const clearIfFixed = () => {
+      if (!isInvalid(input.value, input)) setFieldInvalid(id, false);
+    };
+    ["input", "change", "blur"].forEach((ev) => input.addEventListener(ev, clearIfFixed));
+  });
+}
+
+// ช่องยินยอม (checkbox) ก็เป็น .field เหมือนช่องอื่น — ติ๊กแล้วข้อความผิดหายทันที
+function bindConsentClear(checkboxId) {
+  bindLiveClear({ [checkboxId]: (_v, input) => !input.checked });
+}
+
+// เบอร์โทรไทย — กฎเดียวกับที่ backend ตรวจ: 0 ตามด้วยเลข 8-9 หลัก หรือ +66 ตามด้วยเลข 8-9 หลัก
+// (เว้นวรรคและขีดคั่นได้ เพราะ backend ตัดออกให้ก่อนตรวจ)
+function phoneOk(value) {
+  const v = String(value || "").replace(/[\s-]/g, "");
+  return /^0\d{8,9}$/.test(v) || /^\+66\d{8,9}$/.test(v);
+}
+
+// ข้อความของ 429 (ยิงถี่เกิน) — ต่อท้ายว่าให้รออีกกี่วินาทีถ้า backend ส่ง Retry-After มา
+function retryMessage(err) {
+  if (!err.retryAfter) return err.message;
+  return `${err.message} (ลองใหม่ได้ในอีก ${err.retryAfter} วินาที)`;
+}
+
+// 422 จาก backend ส่ง fields = [{field, label, message}] มาด้วย
+// เอามาทาสีแดง "ช่องที่ผิดจริง" พร้อมข้อความจากเซิร์ฟเวอร์ ไม่ใช่มีแต่ toast รวม ๆ
+// map = { ชื่อ field ฝั่ง backend: id ของ input ในหน้านี้ }
+function applyServerFieldErrors(err, map) {
+  if (!err || !Array.isArray(err.fields)) return false;
+  let firstId = null;
+  err.fields.forEach((f) => {
+    const id = map[f.field];
+    if (!id || !document.getElementById(id)) return;
+    if (f.message) setFieldError(id, f.message);
+    setFieldInvalid(id, true);
+    if (!firstId) firstId = id;
+  });
+  if (firstId) document.getElementById(firstId).focus();
+  return Boolean(firstId);
+}
+
+// พาโฟกัสไปที่ช่องแรกที่ยังผิด เพื่อให้ผู้ใช้คีย์บอร์ด/สกรีนรีดเดอร์รู้ว่าต้องแก้ที่ไหน
+// คืนค่า true ถ้ายังมีช่องที่ผิด (ผู้เรียกใช้ return ได้เลย)
+function focusFirstInvalid(root = document) {
+  const field = root.querySelector(".field.invalid");
+  if (!field) return false;
+  const control = field.querySelector("input, select, textarea");
+  if (control) control.focus();
+  return true;
+}
+
 /* ---------- บังคับให้ล็อกอินก่อนเข้าหน้าที่ต้องใช้สิทธิ์ ---------- */
 
 function requireLogin(nextPath) {
@@ -670,6 +780,97 @@ function toast(message, type = "info", link = null) {
   setTimeout(() => el.remove(), link ? 10000 : 4200);
 }
 
+/* ---------- กล่องยืนยันกลาง (confirm modal) ----------
+   ใช้โครงเดียวกับ modal ยกเลิกใบจองในหน้า status.html (backdrop + focus trap + Escape)
+   เขียนไว้ที่นี่ครั้งเดียวเพื่อให้หน้าอื่นเรียกใช้ได้ และเลี่ยง window.confirm
+   ซึ่งถูกบล็อกในบางสภาพแวดล้อม (กดแล้วเงียบ ผู้ใช้ไม่รู้ว่าเกิดอะไรขึ้น) */
+
+let _confirmBox = null;
+let _confirmDone = null;     // resolve ของ Promise รอบที่เปิดอยู่
+let _confirmOpener = null;   // ปุ่มที่เปิดกล่อง — ปิดแล้วต้องคืนโฟกัสกลับไปที่นี่
+
+function _closeConfirm(result) {
+  if (!_confirmBox) return;
+  _confirmBox.hidden = true;
+  _confirmBox.classList.remove("open");
+  document.body.classList.remove("modal-open");
+  const resolve = _confirmDone;
+  _confirmDone = null;
+  if (_confirmOpener && document.contains(_confirmOpener)) _confirmOpener.focus();
+  _confirmOpener = null;
+  if (resolve) resolve(result);
+}
+
+function _buildConfirmBox() {
+  const box = document.createElement("div");
+  box.className = "modal-backdrop";
+  box.id = "confirm-modal";
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-modal", "true");
+  box.setAttribute("aria-labelledby", "confirm-title");
+  box.setAttribute("aria-describedby", "confirm-desc");
+  box.hidden = true;
+  box.innerHTML = `
+    <div class="modal">
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-desc"></p>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" id="confirm-no"></button>
+        <button type="button" class="btn" id="confirm-yes"></button>
+      </div>
+    </div>`;
+  document.body.appendChild(box);
+
+  box.addEventListener("click", (e) => {
+    if (e.target === box) _closeConfirm(false);   // คลิกนอกกล่อง = ยกเลิก
+  });
+  // Escape ปิด + Tab วนอยู่แค่ในกล่อง (focus trap) ตาม WCAG 2.1.2 No Keyboard Trap
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      return _closeConfirm(false);
+    }
+    if (e.key !== "Tab") return;
+    const stops = [...box.querySelectorAll("button:not(:disabled)")];
+    if (!stops.length) return;
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+  box.querySelector("#confirm-no").addEventListener("click", () => _closeConfirm(false));
+  box.querySelector("#confirm-yes").addEventListener("click", () => _closeConfirm(true));
+  return box;
+}
+
+// confirmDialog({...}) → Promise<boolean> (true = ผู้ใช้กดยืนยัน)
+function confirmDialog({ title, body, confirmText = "ยืนยัน", cancelText = "ยกเลิก", danger = false }) {
+  if (!_confirmBox) _confirmBox = _buildConfirmBox();
+  if (_confirmDone) _closeConfirm(false);   // กันเปิดซ้อนกันสองใบ
+
+  _confirmBox.querySelector("#confirm-title").textContent = title;
+  _confirmBox.querySelector("#confirm-desc").textContent = body;
+  const no = _confirmBox.querySelector("#confirm-no");
+  const yes = _confirmBox.querySelector("#confirm-yes");
+  no.textContent = cancelText;
+  yes.textContent = confirmText;
+  yes.className = `btn ${danger ? "btn-danger" : "btn-primary"}`;
+
+  _confirmOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  _confirmBox.hidden = false;
+  _confirmBox.classList.add("open");
+  document.body.classList.add("modal-open");
+  no.focus();   // เริ่มที่ตัวเลือกที่ปลอดภัยที่สุด
+  return new Promise((resolve) => {
+    _confirmDone = resolve;
+  });
+}
+
 /* ---------- localStorage (เก็บ config รถ + รหัสจองของผู้ใช้) ---------- */
 
 const Store = {
@@ -883,6 +1084,12 @@ function bindReviewForm(onDone) {
     pick(next, true);
   });
 
+  // แก้ให้ถูกแล้วสีแดงหายทันที ไม่ต้องรอกดส่งอีกรอบ
+  bindLiveClear({
+    "rv-title": (v) => v.trim().length < 2,
+    "rv-comment": (v) => v.trim().length < 10,
+  });
+
   document.getElementById("rv-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = document.getElementById("rv-title").value.trim();
@@ -890,7 +1097,7 @@ function bindReviewForm(onDone) {
     setFieldInvalid("rv-title", title.length < 2);
     setFieldInvalid("rv-comment", comment.length < 10);
     if (!rating) return toast("กรุณาให้คะแนนดาวก่อนส่งรีวิว", "error");
-    if (title.length < 2 || comment.length < 10) return;
+    if (focusFirstInvalid()) return;
 
     const btn = document.getElementById("rv-submit");
     btn.disabled = true;

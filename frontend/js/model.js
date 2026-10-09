@@ -200,7 +200,9 @@ async function renderReviewSection() {
       <a class="btn btn-primary mt-2" href="/pages/login.html?next=${next}">เข้าสู่ระบบเพื่อรีวิว</a>`;
     return;
   }
-  if (reviews.some((r) => r.user_id === user.id)) {
+  // backend เลิกส่ง user_id แล้ว ใช้ is_mine แทน — แต่ผู้ดูแลระบบได้ is_mine = true ทุกรีวิว
+  // (ไว้ให้ลบรีวิวคนอื่นได้) จึงเช็คเฉพาะบัญชีลูกค้า ไม่งั้นแอดมินจะขึ้นว่าเคยรีวิวแล้วทั้งที่ไม่เคย
+  if (user.role !== "admin" && reviews.some((r) => r.is_mine)) {
     formZone.innerHTML = `<h3>คุณรีวิวรุ่นนี้แล้ว</h3>
       <p class="muted mt-1">ดูหรือลบรีวิวของคุณได้ที่หน้า <a href="/pages/after-sales.html">หลังการขาย</a></p>`;
     return;

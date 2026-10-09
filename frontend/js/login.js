@@ -22,6 +22,12 @@ document.querySelectorAll("[data-fill]").forEach((btn) => {
   });
 });
 
+// กรอกช่องที่เว้นไว้แล้วสีแดงหายทันที ไม่ต้องรอกดเข้าสู่ระบบอีกรอบ
+bindLiveClear({
+  "li-username": (v) => !v.trim(),
+  "li-password": (v) => !v,
+});
+
 async function submit(event) {
   event.preventDefault();
 
@@ -29,7 +35,7 @@ async function submit(event) {
   const password = document.getElementById("li-password").value;
   setInvalid("li-username", !username);
   setInvalid("li-password", !password);
-  if (document.querySelector(".field.invalid")) return;
+  if (focusFirstInvalid()) return;
 
   const btn = document.getElementById("li-submit");
   btn.disabled = true;
@@ -42,8 +48,14 @@ async function submit(event) {
     toast(`ยินดีต้อนรับ ${data.user.full_name}`, "ok");
     setTimeout(() => (location.href = qs("next") || "/pages/profile.html"), 500);
   } catch (err) {
-    toast(err.message, "error");
-    setInvalid("li-password", true);
+    // 429 = ยิงถี่เกิน (กันเดารหัสผ่าน) ไม่ใช่รหัสผ่านผิด จึงไม่ทาแดงช่องรหัสผ่าน
+    // และไม่ล้างค่าที่ผู้ใช้พิมพ์ไว้ทั้งสองช่อง เพื่อให้กดลองใหม่ได้เลยเมื่อครบเวลา
+    if (err.status === 429) {
+      toast(retryMessage(err), "error");
+    } else {
+      toast(err.message, "error");
+      setInvalid("li-password", true);
+    }
     btn.disabled = false;
     btn.textContent = "เข้าสู่ระบบ";
   }

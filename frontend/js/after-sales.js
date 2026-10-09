@@ -14,7 +14,10 @@ const EARN_LABELS = {
 };
 
 let cars = [];
+// myCarIds เรียงตามลำดับความเป็นเจ้าของ: รถที่มีใบจองมาก่อน แล้วค่อยรถที่เคยจองทดลองขับ
+// (ฟอร์มรีวิวต้องตั้งต้นเป็นรถที่ลูกค้ามีจริง ไม่ใช่รุ่นแรกในรายการทั้งหมด)
 let myCarIds = [];
+let reservedCarIds = [];
 let serviceTime = null;
 
 /* ---------- แท็บ (จำแท็บไว้ใน URL #service / #reviews ให้ลิงก์จากแจ้งเตือนตรงแท็บ) ---------- */
@@ -74,10 +77,25 @@ async function renderLoyalty() {
     .join("");
   document.querySelectorAll("[data-reward]").forEach((btn) =>
     btn.addEventListener("click", async () => {
+      // คลิกเดียวแล้วคะแนนหายไปเลยกู้คืนไม่ได้ — ต้องถามยืนยันก่อน (confirmDialog ใน ui.js
+      // ใช้ modal เดียวกับหน้า "การจองของฉัน" ไม่ใช้ window.confirm ที่บางที่บล็อกไว้)
+      const reward = data.rewards.find((r) => r.id === btn.dataset.reward);
+      const name = reward ? reward.name : "ของรางวัลนี้";
+      const cost = reward ? reward.points.toLocaleString("th-TH") : "";
+      const ok = await confirmDialog({
+        title: "ยืนยันแลกของรางวัล?",
+        body: `แลก "${name}" ใช้ ${cost} คะแนน จากที่มี ${data.balance.toLocaleString("th-TH")} คะแนน`
+          + " — คะแนนจะถูกหักทันทีและไม่สามารถยกเลิกได้",
+        confirmText: "ยืนยันแลก",
+        cancelText: "ไม่แลก",
+      });
+      if (!ok) return;
+
       btn.disabled = true;
       try {
         const res = await API.redeem(btn.dataset.reward);
-        toast(`แลกสำเร็จ รหัสสิทธิ์ ${res.voucher} (ดูได้ที่กระดิ่งแจ้งเตือน)`, "ok");
+        toast(`แลกสำเร็จ รหัสสิทธิ์ ${res.voucher}`, "ok");
+        showVoucher(name, res.voucher);
         renderLoyalty();
       } catch (err) {
         toast(err.message, "error");
@@ -98,6 +116,18 @@ async function renderLoyalty() {
         )
         .join("")
     : '<p class="muted small">ยังไม่มีคะแนน — เริ่มจาก<a href="/pages/test-drive.html"> จองทดลองขับ</a> รับ 100 คะแนน</p>';
+}
+
+// รหัสสิทธิ์ที่แลกได้ต้องอ่านได้จากหน้านี้ ไม่ใช่มีแต่ในกระดิ่งแจ้งเตือน
+// (renderLoyalty วาดใหม่แค่รายการรางวัล กล่องนี้อยู่คนละ element จึงไม่ถูกล้าง)
+function showVoucher(rewardName, code) {
+  const zone = document.getElementById("redeem-result");
+  if (!zone) return;
+  zone.classList.remove("hidden");
+  zone.innerHTML = `
+    <p class="small">แลก <b>${esc(rewardName)}</b> สำเร็จ — รหัสสิทธิ์ของคุณ</p>
+    <p class="code num">${esc(code)}</p>
+    <p class="muted small">แสดงรหัสนี้ที่โชว์รูมหรือศูนย์บริการ (ดูย้อนหลังได้ที่กระดิ่งแจ้งเตือน)</p>`;
 }
 
 /* ---------- นัดเข้าศูนย์บริการ ---------- */
@@ -187,7 +217,7 @@ async function submitService(e) {
   setFieldInvalid("sv-mileage", badMileage);
   if (!document.getElementById("sv-date").value) return toast("กรุณาเลือกวันที่", "error");
   if (!serviceTime) return toast("กรุณาเลือกช่วงเวลา", "error");
-  if (badMileage) return;
+  if (focusFirstInvalid(document.getElementById("sv-form"))) return;
 
   const btn = document.getElementById("sv-submit");
   btn.disabled = true;
@@ -219,7 +249,8 @@ async function submitService(e) {
 async function initService() {
   const [types, showrooms] = await Promise.all([API.serviceTypes(), API.showrooms()]);
   // รถที่ผู้ใช้จอง/ซื้อไว้ขึ้นก่อน รุ่นอื่นตามมา (กรณีซื้อจากช่องทางอื่นแต่ใช้ศูนย์เรา)
-  const ordered = [...cars].sort((a, b) => myCarIds.includes(b.id) - myCarIds.includes(a.id));
+  const rank = (id) => (reservedCarIds.includes(id) ? 0 : myCarIds.includes(id) ? 1 : 2);
+  const ordered = [...cars].sort((a, b) => rank(a.id) - rank(b.id));
   document.getElementById("sv-car").innerHTML = ordered
     .map((c) => `<option value="${c.id}">${esc(c.name)}${myCarIds.includes(c.id) ? " (รถของฉัน)" : ""}</option>`)
     .join("");
@@ -237,6 +268,8 @@ async function initService() {
 
   const dateInput = document.getElementById("sv-date");
   dateInput.min = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // แก้เลขไมล์ให้ถูกแล้วสีแดงหายทันที (ของเดิม validate แค่ตอนกดยืนยัน)
+  bindLiveClear({ "sv-mileage": (v) => v === "" || Number(v) < 0 });
   dateInput.addEventListener("change", loadServiceSlots);
   document.getElementById("sv-center").addEventListener("change", loadServiceSlots);
   document.getElementById("sv-form").addEventListener("submit", submitService);
@@ -252,7 +285,10 @@ async function renderReviewTab() {
 
   const formZone = document.getElementById("rv-zone");
   if (left.length) {
-    const preferred = left.find((c) => myCarIds.includes(c.id)) || left[0];
+    // เลือกตามลำดับ "ความเป็นรถของฉัน" (ใบจอง → ทดลองขับ) ไม่ใช่ลำดับของรายการรถทั้งหมด
+    // ของเดิมไล่จาก left ก่อน จึงได้รุ่นแรกที่ตรงอะไรก็ได้ (เช่น Nissan ที่เพียงเคยทดลองขับ)
+    const preferredId = myCarIds.find((id) => left.some((c) => c.id === id));
+    const preferred = left.find((c) => c.id === preferredId) || left[0];
     formZone.innerHTML = reviewFormHTML(left, preferred.id);
     bindReviewForm(() => {
       renderReviewTab();
@@ -264,7 +300,8 @@ async function renderReviewTab() {
 
   const list = document.getElementById("my-reviews");
   list.innerHTML = mine.length
-    ? mine.map((r) => reviewCardHTML(r, { onDelete: true })).join("")
+    // ปุ่มลบขึ้นตาม is_mine จาก backend (เลิกเทียบ user_id เอง)
+    ? mine.map((r) => reviewCardHTML(r, { onDelete: r.is_mine !== false })).join("")
     : '<div class="card muted">ยังไม่ได้เขียนรีวิว</div>';
   list.querySelectorAll("[data-del-review]").forEach((btn) =>
     btn.addEventListener("click", async () => {
@@ -348,10 +385,8 @@ async function initAfterSales() {
   try {
     const [carList, mine] = await Promise.all([API.cars(), API.myBookings()]);
     cars = carList;
-    myCarIds = [...new Set([
-      ...mine.reservations.filter((r) => r.status !== "cancelled").map((r) => r.car.id),
-      ...mine.testdrives.map((t) => t.car.id),
-    ])];
+    reservedCarIds = mine.reservations.filter((r) => r.status !== "cancelled").map((r) => r.car.id);
+    myCarIds = [...new Set([...reservedCarIds, ...mine.testdrives.map((t) => t.car.id)])];
   } catch (err) {
     return toast(err.message, "error");
   }

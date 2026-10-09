@@ -86,6 +86,13 @@ async function loadSlots() {
   }
 }
 
+// แก้ให้ถูกแล้วสีแดงหายทันที (ของเดิม validate แค่ตอนกดส่ง)
+bindLiveClear({
+  "td-name": (v) => v.trim().length < 2,
+  "td-phone": (v) => !phoneOk(v),
+});
+bindConsentClear("td-license");
+
 async function submit(e) {
   e.preventDefault();
   const name = document.getElementById("td-name").value.trim();
@@ -94,14 +101,14 @@ async function submit(e) {
 
   // validate ฝั่งหน้าเว็บก่อน แล้ว backend จะ validate ซ้ำอีกชั้น
   setFieldInvalid("td-name", name.length < 2);
-  setFieldInvalid("td-phone", phone.replace(/\D/g, "").length < 9);
+  setFieldInvalid("td-phone", !phoneOk(phone));
   if (!carId) return toast("กรุณาเลือกรุ่นรถ", "error");
   if (!showroomId) return toast("กรุณาเลือกโชว์รูม", "error");
   if (!date) return toast("กรุณาเลือกวันที่นัด", "error");
   if (!selectedTime) return toast("กรุณาเลือกช่วงเวลา", "error");
-  if (name.length < 2 || phone.replace(/\D/g, "").length < 9) return;
-  if (!document.getElementById("td-license").checked)
-    return toast("ผู้ทดลองขับต้องมีใบขับขี่", "error");
+  // ไม่ติ๊กยืนยันใบขับขี่ก็เป็นข้อผิดพลาดของฟอร์มเหมือนช่องอื่น — ขึ้นข้อความตรงใต้ช่องนั้น
+  setFieldInvalid("td-license", !document.getElementById("td-license").checked);
+  if (focusFirstInvalid()) return;
 
   const btn = document.getElementById("td-submit");
   btn.disabled = true;

@@ -51,8 +51,8 @@ async function saveProfile(event) {
 
   setInvalid("pf-fullname", fullName.length < 2);
   setInvalid("pf-email", !EMAIL_RE.test(email));
-  setInvalid("pf-phone", phone.replace(/\D/g, "").length < 9);
-  if (document.querySelector("[data-panel='info'] .field.invalid")) return;
+  setInvalid("pf-phone", !phoneOk(phone));
+  if (focusFirstInvalid(document.querySelector("[data-panel='info']"))) return;
 
   const btn = document.getElementById("pf-submit");
   btn.disabled = true;
@@ -73,6 +73,16 @@ async function saveProfile(event) {
 
 /* ---------- แท็บ 2: เปลี่ยนรหัสผ่าน ---------- */
 
+// แก้ให้ถูกแล้วสีแดงหายทันที (ของเดิม validate แค่ตอนกดบันทึก)
+bindLiveClear({
+  "pf-fullname": (v) => v.trim().length < 2,
+  "pf-email": (v) => !EMAIL_RE.test(v.trim()),
+  "pf-phone": (v) => !phoneOk(v),
+  "pw-current": (v) => !v,
+  "pw-new": (v) => !(v.length >= 8 && /[A-Za-z]/.test(v) && /\d/.test(v)),
+  "pw-new2": (v) => !v || v !== document.getElementById("pw-new").value,
+});
+
 async function changePassword(event) {
   event.preventDefault();
 
@@ -84,7 +94,7 @@ async function changePassword(event) {
   setInvalid("pw-current", !current);
   setInvalid("pw-new", !strong);
   setInvalid("pw-new2", next !== next2 || !next2);
-  if (document.querySelector("[data-panel='password'] .field.invalid")) return;
+  if (focusFirstInvalid(document.querySelector("[data-panel='password']"))) return;
 
   const btn = document.getElementById("pw-submit");
   btn.disabled = true;
@@ -198,7 +208,15 @@ function bindRowActions() {
   document.querySelectorAll("[data-delete]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.delete);
-      if (!confirm(`ยืนยันลบบัญชี "${btn.dataset.name}" ? การลบนี้ย้อนกลับไม่ได้`)) return;
+      // window.confirm ถูกบล็อกในบางสภาพแวดล้อม (กดแล้วเงียบ) — ใช้ modal ของระบบเองแทน
+      const ok = await confirmDialog({
+        title: "ยืนยันลบบัญชีผู้ใช้?",
+        body: `ลบบัญชี "${btn.dataset.name}" ออกจากระบบถาวร — การลบนี้ย้อนกลับไม่ได้`,
+        confirmText: "ยืนยันลบบัญชี",
+        cancelText: "ไม่ลบ",
+        danger: true,
+      });
+      if (!ok) return;
       try {
         await API.deleteUser(id);
         toast("ลบบัญชีเรียบร้อย", "ok");
