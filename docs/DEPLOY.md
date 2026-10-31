@@ -6,7 +6,10 @@
 
 Repo: <https://github.com/Etihw175/astra-motors>
 
-ถ้าจะลงบน VPS ของตัวเองที่ล็อกอิน SSH ได้ ให้ดู [docs/DEPLOY-VPS.md](DEPLOY-VPS.md) แทน
+ถ้าจะลงบน VPS ของตัวเองที่ล็อกอิน SSH ได้ ให้ดู [DEPLOY-VPS.md](DEPLOY-VPS.md)
+ถ้าโฮสต์เข้าได้ทาง FTP อย่างเดียว ให้ดู [DEPLOY-FTP.md](DEPLOY-FTP.md) ซึ่งวางหน้าเว็บบนโฮสต์นั้น
+แล้วใช้เอกสารนี้ deploy เฉพาะฝั่ง API
+
 เอกสารนี้เป็นฝั่ง PaaS (Render กับ Railway)
 
 ---
