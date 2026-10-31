@@ -1,7 +1,9 @@
 # จุดเริ่มแอป: รวม API routers ทั้งหมด + serve ไฟล์ frontend (static) ในตัวเดียวกัน
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -37,6 +39,28 @@ app = FastAPI(
 
 # สร้างตาราง + seed แคตตาล็อกและบัญชีตัวอย่าง (admin / somchai / nattaya)
 init_db()
+
+
+# ---------- CORS ----------
+# ปกติหน้าเว็บถูกเสิร์ฟจากแอปตัวนี้เอง จึงเป็น origin เดียวกันและไม่ต้องใช้ CORS เลย
+# จะได้ใช้ก็ตอนเอาหน้าเว็บไปวางคนละโฮสต์กับ API (เช่นลากขึ้นโฮสต์ FTP แล้ว API อยู่ Render)
+# ตั้งผ่าน env CORS_ORIGINS คั่นด้วยจุลภาค เช่น
+#   CORS_ORIGINS=https://astra.example.com,https://www.astra.example.com
+# ไม่ตั้ง = ไม่เปิด CORS ให้ใคร ซึ่งเป็นค่าที่ปลอดภัยที่สุดและพอสำหรับการ deploy แบบโดเมนเดียว
+# ไม่ใช้ allow_credentials เพราะ token เก็บใน localStorage แล้วแนบมาเป็น header เอง ไม่ได้ใช้คุกกี้
+# และห้ามตั้ง origin เป็น "*" คู่กับ credentials อยู่แล้วตามสเปก
+CORS_ORIGINS = [o.strip().rstrip("/") for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+
+if CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=CORS_ORIGINS,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+        expose_headers=["Retry-After"],   # หน้าเว็บอ่านค่านี้ตอนโดน 429 เพื่อบอกผู้ใช้ว่าให้รอกี่วินาที
+        max_age=600,
+    )
 
 
 # ---------- security headers ----------

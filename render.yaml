@@ -19,6 +19,11 @@ services:
         fromDatabase:
           name: astra-db
           property: connectionString
+      # ใส่เฉพาะตอนเอาหน้าเว็บไปวางคนละโฮสต์กับ API (เช่นลากขึ้นโฮสต์ FTP)
+      # ค่าคือ origin ของหน้าเว็บ เช่น https://astra.example.com คั่นหลายค่าด้วยจุลภาค
+      # sync: false = Render ถามตอน Apply และไม่เก็บค่าไว้ในไฟล์นี้ ว่างไว้ได้ถ้าใช้โดเมนเดียว
+      - key: CORS_ORIGINS
+        sync: false
 
 databases:
   # Managed PostgreSQL ของ Render — ข้อมูลอยู่นอกคอนเทนเนอร์ จึงไม่หายเวลา deploy ใหม่หรือ service sleep

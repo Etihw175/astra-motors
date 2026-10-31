@@ -38,7 +38,8 @@ async function _api(path, options = {}) {
 
   let res;
   try {
-    res = await fetch(path, { ...options, headers });
+    // apiUrl() เติมโดเมนของ backend ให้เวลาแยกโฮสต์กัน (ดู js/config.js) ถ้าอยู่โดเมนเดียวกันจะคืน path เดิม
+    res = await fetch(apiUrl(path), { ...options, headers });
   } catch {
     throw new Error("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
   }

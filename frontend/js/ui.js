@@ -259,7 +259,7 @@ async function _openBellStream() {
     return;
   }
 
-  const stream = new EventSource(`/api/notifications/stream?ticket=${encodeURIComponent(ticket)}`);
+  const stream = new EventSource(apiUrl(`/api/notifications/stream?ticket=${encodeURIComponent(ticket)}`));
   _bellStream = stream;
 
   stream.addEventListener("open", () => {
