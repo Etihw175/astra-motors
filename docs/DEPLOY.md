@@ -6,6 +6,9 @@
 
 Repo: <https://github.com/Etihw175/astra-motors>
 
+ถ้าจะลงบน VPS ของตัวเองที่ล็อกอิน SSH ได้ ให้ดู [docs/DEPLOY-VPS.md](DEPLOY-VPS.md) แทน
+เอกสารนี้เป็นฝั่ง PaaS (Render กับ Railway)
+
 ---
 
 ## วิธีที่ 1: Render ด้วย Blueprint (แนะนำ)
