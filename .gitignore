@@ -28,3 +28,6 @@ docs/nodemo.txt
 docs/presentation-script-nodemo.md
 lab/
 *.pdf
+
+# ผลลัพธ์ของ scripts/build-static.py (สร้างใหม่ได้เสมอ)
+dist/
