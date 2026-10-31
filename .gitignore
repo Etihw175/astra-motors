@@ -21,3 +21,10 @@ frontend/assets/models/*/
 
 # เอกสารประกอบการสอนที่อาจารย์แจก (เก็บไว้ในเครื่องเท่านั้น ไม่ต้องขึ้น repo)
 document/
+
+# สคริปต์เดโมและไฟล์ที่ใช้เตรียมนำเสนอ (เก็บไว้ในเครื่อง)
+docs/Demo.txt
+docs/nodemo.txt
+docs/presentation-script-nodemo.md
+lab/
+*.pdf
