@@ -1,0 +1,64 @@
+# คอนฟิกสำหรับรันบน VPS จริง — ใช้แทน docker-compose.yml ไม่ใช่ใช้ร่วมกัน
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# เขียนแยกเป็นไฟล์เต็มแทนการทำ override เพราะ Compose รวมรายการ ports แบบต่อท้าย
+# ตั้ง ports: [] ในไฟล์ override จึงไม่ได้ลบพอร์ตเดิมออก ฐานข้อมูลจะยังโผล่ออกเน็ตอยู่
+#
+# ต่างจาก docker-compose.yml (ที่ทำไว้ให้ dev สะดวก) 4 เรื่อง
+#   1. ไม่ mount โค้ดจากเครื่อง host  — ใช้โค้ดที่ build ติดไปกับ image เท่านั้น
+#   2. ไม่ใช้ --reload                — โหมด reload กินแรมและไม่ควรใช้บน production
+#   3. ไม่เปิดพอร์ต Postgres ออกเน็ต  — db คุยกับ web ผ่านเครือข่ายภายในของ Compose พอ
+#   4. web ฟังที่ 127.0.0.1:8000      — ให้ reverse proxy (Caddy/nginx) รับ 80/443 แทน
+#
+# ก่อนรันครั้งแรกต้องมีไฟล์ .env ที่ตั้ง POSTGRES_PASSWORD และ DATABASE_URL ให้ตรงกัน
+# ขั้นตอนเต็มอยู่ใน docs/DEPLOY-VPS.md
+services:
+  web:
+    build:
+      context: .                     # ต้องเป็น root เพื่อให้ Dockerfile เห็นทั้ง backend/ และ frontend/
+      dockerfile: backend/Dockerfile
+    container_name: astra-web
+    ports:
+      - "127.0.0.1:8000:8000"        # เข้าจากภายนอกตรง ๆ ไม่ได้ ต้องผ่าน reverse proxy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?ต้องตั้ง DATABASE_URL ในไฟล์ .env ก่อน}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"              # กัน log กินดิสก์จนเต็ม
+        max-file: "3"
+
+  db:
+    image: postgres:16
+    container_name: astra-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?ต้องตั้งในไฟล์ .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ต้องตั้งรหัสผ่านจริงในไฟล์ .env}
+      POSTGRES_DB: ${POSTGRES_DB:?ต้องตั้งในไฟล์ .env}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  db_data:
