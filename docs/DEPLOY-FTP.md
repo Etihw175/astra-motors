@@ -82,6 +82,35 @@ http://angsila.cs.buu.ac.th
 ถ้าโฮสต์เปิดได้ทั้ง http และ https ให้ใส่ทั้งสองคั่นด้วยจุลภาค
 หน้าเว็บที่เปิดด้วย http เรียก API ที่เป็น https ได้ตามปกติ ที่เบราว์เซอร์บล็อกคือทางกลับกัน
 
+## อัปด้วยคำสั่งเดียวแทนการลากไฟล์ (ต้องเข้า SSH ได้)
+
+angsila เปิด `sftp://` ได้ แปลว่าเครื่องมี SSH ถ้าล็อกอิน SSH ได้ ตั้ง key ครั้งเดียว
+แล้วอัปด้วยคำสั่งเดียวได้ตลอด ไม่ต้องลากไฟล์ทีละรอบ
+
+ติดตั้ง public key บนเครื่องปลายทาง ทำครั้งเดียว เปิด PowerShell ธรรมดาแล้วรัน
+
+```powershell
+# ถ้ายังไม่มี key ในเครื่อง สร้างก่อน (กด Enter ผ่านทุกคำถามได้)
+ssh-keygen -t ed25519
+
+# ส่ง public key ขึ้นไปต่อท้าย authorized_keys (ถามรหัสผ่านครั้งนี้ครั้งเดียว)
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh 67160175@angsila.cs.buu.ac.th "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
+```
+
+ตรวจว่าใช้ได้ ต้องได้คำว่า ok โดยไม่ถามรหัสผ่าน
+
+```powershell
+ssh -o BatchMode=yes 67160175@angsila.cs.buu.ac.th "echo ok"
+```
+
+จากนั้นอัปทั้งเว็บด้วยคำสั่งเดียว สคริปต์เตรียมไฟล์ให้แล้วส่งขึ้นไปเอง
+
+```powershell
+.\scripts\upload-angsila.ps1 -User 67160175 -Api https://astra-motors-xxxx.onrender.com
+```
+
+รอบถัดไปที่แก้แค่โค้ดหน้าเว็บ เติม `-SkipModels` จะได้ไม่ต้องส่งโมเดล 3D ซ้ำ 46 MB
+
 ## ขั้นที่ 3: ลากขึ้นด้วย FileZilla
 
 1. ต่อ FileZilla เข้าโฮสต์ ตั้ง Protocol เป็น **SFTP** ถ้าโฮสต์รองรับ ถ้ามีแต่ FTP ธรรมดา
